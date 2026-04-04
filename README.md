@@ -224,8 +224,65 @@ Recomendaciones:
 
 - JDK 17 configurado o una versión compatible con el proyecto.
 - Maven instalado.
-- RabbitMQ corriendo en `localhost:5672`.
+- RabbitMQ corriendo en `localhost:5672` (requisito obligatorio para auditoría asíncrona).
 - Acceso a la base MySQL configurada en los `application.properties`.
+
+### RabbitMQ en este proyecto: qué es y cómo levantarlo
+
+RabbitMQ es un broker de mensajería (colas) que desacopla productores y consumidores.
+
+En este proyecto se usa para auditoría asíncrona:
+
+- `inventory-service` publica eventos como `lote_creado` e `inventario_reducido`.
+- `scanner-service` publica eventos como `venta_realizada`.
+- `audit-service` consume la cola `cola-auditoria` y persiste los eventos.
+
+Si RabbitMQ no está arriba:
+
+- Las operaciones de negocio pueden seguir funcionando parcialmente.
+- El historial de auditoría puede quedar incompleto.
+
+Configuración esperada por defecto:
+
+- Host: `localhost`
+- Puerto AMQP: `5672`
+- Usuario: `guest`
+- Password: `guest`
+- Cola usada: `cola-auditoria`
+
+Arranque rápido por sistema operativo:
+
+- macOS (Homebrew):
+
+```bash
+brew services start rabbitmq
+```
+
+- Linux (systemd):
+
+```bash
+sudo systemctl start rabbitmq-server
+sudo systemctl enable rabbitmq-server
+```
+
+- Windows:
+
+1. Inicia el servicio RabbitMQ desde `services.msc`.
+2. O usa la consola de RabbitMQ si lo instalaste con servicio local.
+
+Verificación mínima recomendada:
+
+```bash
+rabbitmqctl status
+```
+
+Verificación de cola (opcional, útil para diagnóstico):
+
+```bash
+rabbitmqctl list_queues name messages consumers
+```
+
+Deberías ver `cola-auditoria` creada cuando los servicios productores/consumidor ya iniciaron.
 
 ### Frontend
 
