@@ -1,135 +1,149 @@
 # Caminos Sostenibles Market
 
-Proyecto de supermercado/ERP construido con arquitectura de microservicios en Spring Boot y un frontend en React. El sistema cubre tres frentes principales:
+Sistema ERP de supermercado basado en microservicios con Spring Boot y frontend en React.
 
-- Gestión administrativa de productos y ventas.
-- Operación de bodega con registro de stock y escaneo por cámara/código de barras.
-- Experiencia cliente para registro, login, catálogo, carrito y checkout.
+---
 
-La solución se apoya en descubrimiento de servicios con Eureka, comunicación HTTP entre servicios con OpenFeign, persistencia en MySQL y auditoría asíncrona con RabbitMQ.
+## Levantar el proyecto
 
-## 1. Visión General
-
-El repositorio es un monorepo con:
-
-- Un `pom.xml` raíz que orquesta los microservicios backend.
-- Varios servicios Spring Boot, cada uno con responsabilidad delimitada.
-- Un frontend React/Vite que consume los servicios por medio de proxy local.
-
-Capacidades principales del sistema:
-
-- CRUD de productos.
-- Activación y desactivación de productos según disponibilidad.
-- Control de inventario por lotes.
-- Descuento de stock con lógica FIFO.
-- Escaneo de códigos de barras desde navegador/celular.
-- Registro e inicio de sesión de clientes.
-- Checkout de pedidos online.
-- Consulta de pedidos del cliente y ventas recientes para administración.
-- Auditoría de eventos relevantes del dominio.
-
-## 2. Arquitectura General
-
-### 2.1 Servicios y puertos
-
-| Módulo | Puerto | Rol principal |
-|---|---:|---|
-| `eureka-server` | 8761 | Registro y descubrimiento de microservicios |
-| `product-service` | 8081 | Catálogo y administración de productos |
-| `inventory-service` | 8082 | Existencias, lotes, reducción y alta de stock |
-| `audit-service` | 8083 | Persistencia y consulta de eventos de auditoría |
-| `scanner-service` | 8084 | Escaneo físico y ventas online con ajuste de stock |
-| `customer-service` | 8085 | Registro, login y perfil de cliente |
-| `purchase-service` | 8086 | Checkout y consulta de pedidos |
-| `frontend` | 5173 | Interfaz web para administrador, bodega y cliente |
-
-### 2.2 Relación entre servicios
-
-Flujo simplificado:
-
-1. `product-service` administra el catálogo maestro de productos.
-2. `inventory-service` registra lotes y existencias por producto.
-3. `scanner-service` recibe ventas físicas por código de barras y ventas online por ID de producto.
-4. `purchase-service` ejecuta checkout; para cada ítem delega la salida de stock a `scanner-service`.
-5. `inventory-service` y `scanner-service` publican eventos a RabbitMQ.
-6. `audit-service` consume esos mensajes y los persiste.
-7. `frontend` consume todos esos servicios por medio de rutas `/api/...` proxificadas por Vite.
-
-### 2.2.1 Diagrama de alto nivel
-
-```mermaid
-flowchart LR
-	U1[Administrador] --> FE[Frontend React Vite]
-	U2[Bodega] --> FE
-	U3[Cliente] --> FE
-
-	FE --> PROD[product-service 8081]
-	FE --> INV[inventory-service 8082]
-	FE --> SCAN[scanner-service 8084]
-	FE --> CUST[customer-service 8085]
-	FE --> PUR[purchase-service 8086]
-
-	PROD --> EUR[Eureka Server 8761]
-	INV --> EUR
-	SCAN --> EUR
-	CUST --> EUR
-	PUR --> EUR
-	AUD[audit-service 8083] --> EUR
-
-	INV --> MQ[RabbitMQ]
-	SCAN --> MQ
-	MQ --> AUD
-
-	PROD --> DB1[(bd_productos)]
-	INV --> DB2[(bd_inventario)]
-	CUST --> DB3[(bd_clientes)]
-	PUR --> DB4[(bd_pedidos)]
-	AUD --> DB5[(bd_auditoria)]
+```bash
+docker compose up --build
 ```
+> Requiere Docker corriendo. Las bases de datos son remotas en Railway.
+---
 
-### 2.2.2 Diagrama del flujo de compra online
+## URLs una vez levantado
 
-```mermaid
-sequenceDiagram
-	participant Cliente
-	participant Frontend
-	participant Purchase as purchase-service
-	participant Product as product-service
-	participant Scanner as scanner-service
-	participant Inventory as inventory-service
-	participant Rabbit as RabbitMQ
-	participant Audit as audit-service
+### Acceso principal
 
-	Cliente->>Frontend: Confirmar checkout
-	Frontend->>Purchase: POST /api/pedidos/checkout
-	loop por cada item
-		Purchase->>Product: GET /api/productos/{id}
-		Product-->>Purchase: Producto
-		Purchase->>Scanner: POST /api/escaneo/ventas/online
-		Scanner->>Inventory: POST /api/inventario/reducir-stock
-		Inventory-->>Scanner: OK / error
-		Scanner->>Product: PUT /api/productos/{id}/estado?activo=false
-		Scanner->>Rabbit: evento venta_realizada
-	end
-	Rabbit->>Audit: consumir cola-auditoria
-	Purchase-->>Frontend: PedidoResponse
-	Frontend-->>Cliente: Compra exitosa
+| Interfaz           | URL                          |
+|--------------------|------------------------------|
+| **Frontend (web)** | http://localhost:3000        |
+| Eureka Dashboard   | http://localhost:8761        |
+
+### APIs REST y Swagger UI
+
+| Servicio           | Puerto | Base URL                              | Swagger UI                                      |
+|--------------------|--------|---------------------------------------|-------------------------------------------------|
+| product-service    | 8081   | http://localhost:8081/api/productos   | http://localhost:8081/swagger-ui/index.html     |
+| inventory-service  | 8082   | http://localhost:8082/api/inventario  | http://localhost:8082/swagger-ui/index.html     |
+| audit-service      | 8083   | http://localhost:8083/api/auditoria   | http://localhost:8083/swagger-ui/index.html     |
+| scanner-service    | 8084   | http://localhost:8084/api/escaneo     | http://localhost:8084/swagger-ui/index.html     |
+| customer-service   | 8085   | http://localhost:8085/api/clientes    | http://localhost:8085/swagger-ui/index.html     |
+| purchase-service   | 8086   | http://localhost:8086/api/pedidos     | http://localhost:8086/swagger-ui/index.html     |
+
+---
+## Endpoints por servicio
+
+### product-service — `:8081/api/productos`
 ```
+GET    /                          → listar todos
+GET    /{id}                      → obtener por ID
+GET    /codigo/{codigo}           → obtener por código de barras
+GET    /buscar?nombre=            → buscar por nombre
+POST   /                          → crear producto
+PUT    /{id}                      → actualizar producto
+PUT    /{id}/estado?activo=true   → activar/desactivar
+DELETE /{id}                      → eliminar
+```
+### inventory-service — `:8082/api/inventario`
+```
+GET  /existencias                          → todas las existencias
+GET  /existencias/{idProducto}             → existencia de un producto
+GET  /lotes/{idProducto}                   → lotes del producto
+POST /agregar-stock?idProducto=&numeroLote=&cantidad=&fechaVencimiento=
+POST /reducir-stock?idProducto=&cantidad=
+GET  /lotes-por-vencer?fechaLimite=        → lotes próximos a vencer
+```
+### audit-service — `:8083/api/auditoria`
+```
+GET /eventos                        → todos los eventos
+GET /eventos/agregado/{idAgregado}  → eventos por agregado
+GET /eventos/tipo/{tipoEvento}      → eventos por tipo
+```
+### scanner-service — `:8084/api/escaneo`
+```
+POST /         → escaneo en caja (codigoBarras, operacion, cantidad)
+POST /ventas/online → venta online  (idProducto, cantidad)
+```
+### customer-service — `:8085/api/clientes`
+```
+POST /registro          → registrar cliente (body JSON)
+POST /login             → iniciar sesión   (body JSON)
+GET  /{idCliente}       → obtener perfil
+PUT  /{idCliente}       → actualizar perfil (body JSON)
+```
+### purchase-service — `:8086/api/pedidos`
+```
+POST /checkout              → crear pedido (body JSON)
+GET  /cliente/{idCliente}   → pedidos de un cliente
+GET  /                      → listar todos los pedidos
+```
+---
 
-### 2.3 Decisiones técnicas importantes
+## Rutas del frontend
 
-- El catálogo y el inventario están separados: un producto existe aunque no tenga stock.
-- El estado `activo` del producto se usa para disponibilidad comercial.
-- La reducción de stock se hace por lotes y usando FIFO.
-- La auditoría es asíncrona: una venta o ajuste de stock puede completarse aunque la auditoría falle temporalmente.
-- El frontend trabaja con rutas relativas `/api/...` para evitar problemas de CORS y facilitar acceso desde celular durante desarrollo.
+| Ruta                  | Vista                        |
+|-----------------------|------------------------------|
+| `/admin`              | Panel de administración      |
+| `/bodega`             | Gestión de inventario        |
+| `/cliente/auth`       | Login / Registro de cliente  |
+| `/cliente/catalogo`   | Catálogo de productos        |
+| `/cliente/carrito`    | Carrito de compras           |
+| `/cliente/checkout`   | Proceso de pago              |
+| `/cliente/pedidos`    | Historial de pedidos         |
+| `/cliente/cuenta`     | Perfil del cliente           |
+---
 
-## 3. Estructura del Repositorio
+## Arquitectura
+```
+Frontend (React)
+    └── consume los 5 microservicios REST
 
-```text
+eureka-server (8761)
+    └── registro y descubrimiento de servicios
+
+product-service  → catálogo de productos
+inventory-service → stock y lotes con fecha de vencimiento
+scanner-service  → escaneo de caja y ventas online (consume product + inventory via Feign)
+customer-service → registro y autenticación de clientes
+purchase-service → checkout y historial de pedidos
+audit-service    → registro de eventos via RabbitMQ
+```
+---
+## Stack tecnológico
+
+| Capa            | Tecnología                            |
+|-----------------|---------------------------------------|
+| Backend         | Java 17, Spring Boot 3.2, Spring Cloud |
+| Service Discovery | Netflix Eureka                      |
+| HTTP entre servicios | OpenFeign                        |
+| Mensajería      | RabbitMQ (guest/guest, puerto 5672)   |
+| Base de datos   | MySQL 8 en Railway (remota)           |
+| Frontend        | React 19, React Router 7, Vite 8     |
+| Escaneo QR      | html5-qrcode                          |
+| Animaciones     | GSAP                                  |
+| Contenedores    | Docker + Docker Compose               |
+| Servidor web    | Nginx (dentro del contenedor frontend)|
+---
+
+## Bases de datos (Railway)
+
+Host: `tramway.proxy.rlwy.net:36355`
+| Base de datos   | Servicio que la usa  |
+|-----------------|----------------------|
+| bd_productos    | product-service      |
+| bd_inventario   | inventory-service    |
+| bd_auditoria    | audit-service        |
+| bd_clientes     | customer-service     |
+| bd_pedidos      | purchase-service     |
+---
+
+## Estructura del repositorio
+```
 .
+├── docker-compose.yml
 ├── pom.xml
-├── README.md
 ├── eureka-server/
 ├── product-service/
 ├── inventory-service/
@@ -139,1249 +153,267 @@ sequenceDiagram
 ├── purchase-service/
 └── frontend/
 ```
+---
 
-### 3.1 `pom.xml` raíz
+## Guía de clases por microservicio
 
-Es un agregador Maven multi-módulo. Declara:
+### Cómo están organizados los servicios
 
-- `spring-boot-starter-parent` 3.2.0
-- `java.version` 17
-- `spring-cloud.version` 2023.0.0
-- Los módulos del sistema
+En tu editor, la ruta al código de cada servicio es:
 
-Módulos declarados actualmente:
-
-- `eureka-server`
-- `product-service`
-- `inventory-service`
-- `scanner-service`
-- `audit-service`
-- `customer-service`
-- `purchase-service`
-
-## 4. Stack Tecnológico
-
-### Backend
-
-- Java 17
-- Spring Boot 3.2.0
-- Spring Web
-- Spring Data JPA
-- Spring Cloud Netflix Eureka
-- Spring Cloud OpenFeign
-- Spring AMQP / RabbitMQ
-- Hibernate
-- MySQL 8
-- Maven
-
-### Frontend
-
-- React
-- React Router
-- Vite
-- GSAP
-- html5-qrcode
-- CSS plano centralizado en `src/index.css`
-
-### Infraestructura y soporte
-
-- RabbitMQ local para auditoría asíncrona
-- Base de datos MySQL externa
-- Vite proxy para desarrollo local
-- LocalTunnel/Cloudflare Tunnel para pruebas móviles si hace falta exponer el frontend
-
-## 5. Bases de Datos
-
-Cada servicio con persistencia mantiene su propia base de datos, siguiendo el principio de ownership por servicio.
-
-| Base de datos | Servicio |
-|---|---|
-| `bd_productos` | `product-service` |
-| `bd_inventario` | `inventory-service` |
-| `bd_auditoria` | `audit-service` |
-| `bd_clientes` | `customer-service` |
-| `bd_pedidos` | `purchase-service` |
-
-Notas:
-
-- `scanner-service` no mantiene base propia en el estado actual; orquesta otros servicios.
-- `eureka-server` tampoco persiste dominio de negocio.
-
-## 6. Seguridad y Configuración
-
-El repositorio contiene configuración directa en archivos `application.properties`. Para un entorno real, esto debe endurecerse.
-
-Recomendaciones:
-
-- Mover credenciales y URLs sensibles a variables de entorno o perfiles externos.
-- No documentar ni versionar secretos reales en el README.
-- Mantener RabbitMQ, MySQL y URLs de infraestructura parametrizados por entorno.
-- Considerar autenticación real con tokens para el portal cliente si el proyecto evoluciona a producción.
-
-## 7. Requisitos Previos
-
-### Backend
-
-- JDK 17 configurado o una versión compatible con el proyecto.
-- Maven instalado.
-- RabbitMQ corriendo en `localhost:5672` (requisito obligatorio para auditoría asíncrona).
-- Acceso a la base MySQL configurada en los `application.properties`.
-
-### RabbitMQ en este proyecto: qué es y cómo levantarlo
-
-RabbitMQ es un broker de mensajería (colas) que desacopla productores y consumidores.
-
-En este proyecto se usa para auditoría asíncrona:
-
-- `inventory-service` publica eventos como `lote_creado` e `inventario_reducido`.
-- `scanner-service` publica eventos como `venta_realizada`.
-- `audit-service` consume la cola `cola-auditoria` y persiste los eventos.
-
-Si RabbitMQ no está arriba:
-
-- Las operaciones de negocio pueden seguir funcionando parcialmente.
-- El historial de auditoría puede quedar incompleto.
-
-Configuración esperada por defecto:
-
-- Host: `localhost`
-- Puerto AMQP: `5672`
-- Usuario: `guest`
-- Password: `guest`
-- Cola usada: `cola-auditoria`
-
-Arranque rápido por sistema operativo:
-
-- macOS (Homebrew):
-
-```bash
-brew services start rabbitmq
+```
+product-service/src/main/java/productservice/
+inventory-service/src/main/java/inventoryservice/
+audit-service/src/main/java/auditservice/
+scanner-service/src/main/java/scannerservice/
+customer-service/src/main/java/customerservice/
+purchase-service/src/main/java/purchaseservice/
 ```
 
-- Linux (systemd):
+> `src/main/java/` es una convención fija de Java que no se puede cambiar. El código real está en la carpeta con el nombre del servicio.
 
-```bash
-sudo systemctl start rabbitmq-server
-sudo systemctl enable rabbitmq-server
+Dentro de cada una encontrarás siempre las mismas subcarpetas:
+
+| Carpeta          | Qué contiene                                      | Cuándo la tocas                              |
+|------------------|---------------------------------------------------|----------------------------------------------|
+| `entity/`        | La forma de los datos (campos de la tabla en BD)  | Cuando agregas o cambias un campo            |
+| `repository/`    | Cómo buscar datos en la BD                        | Cuando necesitas un nuevo tipo de búsqueda   |
+| `service/`       | Las reglas del negocio                            | Cuando cambias cómo funciona algo            |
+| `controller/`    | Los endpoints que recibe la API                   | Cuando agregas o modificas una ruta HTTP     |
+| `dto/`           | Los datos que entran y salen por la API           | Cuando cambias qué campos recibe o devuelve  |
+| `client/`        | Llamadas a otros microservicios                   | Cuando conectas con otro servicio            |
+| `configuracion/` | Configuración de RabbitMQ                         | Casi nunca                                   |
+
+**Flujo de una petición:**
+```
+Petición HTTP → controller → service → repository → base de datos
+                                    ↓
+                             (si necesita otro servicio)
+                                  client → otro microservicio
 ```
 
-- Windows:
+---
 
-1. Inicia el servicio RabbitMQ desde `services.msc`.
-2. O usa la consola de RabbitMQ si lo instalaste con servicio local.
+### product-service — Gestión del catálogo de productos
 
-Verificación mínima recomendada:
+#### `entity/Producto.java`
+Representa la tabla `productos` en la BD. Cada campo es una columna.
+Tiene validaciones: el código debe tener entre 8-14 dígitos, el nombre entre 2-120 caracteres, el precio debe ser positivo.
+**Modificar si:** necesitas agregar un campo nuevo al producto (ej. marca, proveedor).
 
-```bash
-rabbitmqctl status
-```
+#### `repository/ProductoRepository.java`
+Interface para acceder a la BD. Spring genera el SQL automáticamente.
+Tiene dos métodos extra: buscar por `codigoProducto` y buscar por nombre (sin importar mayúsculas).
+**Modificar si:** necesitas un nuevo tipo de búsqueda (ej. buscar por categoría).
 
-Verificación de cola (opcional, útil para diagnóstico):
+#### `service/ProductoService.java`
+Contiene toda la lógica de negocio. Los productos se crean con `activo=false` por defecto hasta que se activen manualmente.
+Métodos: crear, actualizar, eliminar, buscar por nombre, buscar por código, activar/desactivar.
+**Modificar si:** quieres cambiar alguna regla (ej. que los productos se creen activos por defecto, o agregar validaciones extra).
 
-```bash
-rabbitmqctl list_queues name messages consumers
-```
+#### `controller/ProductoController.java`
+Define los 8 endpoints REST de `/api/productos`. Recibe la petición HTTP, llama al service, devuelve la respuesta.
+Tiene `@CrossOrigin("*")` para permitir llamadas desde el frontend.
+**Modificar si:** necesitas agregar un nuevo endpoint o cambiar el path de uno existente.
 
-Deberías ver `cola-auditoria` creada cuando los servicios productores/consumidor ya iniciaron.
+---
 
-### Frontend
+### inventory-service — Control de stock y lotes
 
-- Node.js y npm.
-- Dependencias instaladas con `npm install` dentro de `frontend/`.
+#### `entity/ExistenciaProducto.java`
+Tabla `existencias_producto`. Guarda el total de stock disponible por producto (`idProducto`, `cantidadTotal`).
+Es el número que se muestra como "stock disponible".
+**Modificar si:** necesitas agregar más datos al resumen de stock (ej. stock mínimo de alerta).
 
-### Desarrollo móvil o escaneo por cámara
+#### `entity/Lote.java`
+Tabla `lotes_producto`. Cada lote es una entrada de mercancía con su propio número, cantidad y fecha de vencimiento.
+Un producto puede tener múltiples lotes.
+**Modificar si:** necesitas guardar más información de cada lote (ej. proveedor, precio de compra).
 
-- Navegador con soporte de cámara.
-- En iPhone/Safari, acceso por contexto seguro si la cámara lo exige.
-- Si se accede desde otra red/dispositivo, puede ser útil usar `npm run tunnel`.
+#### `repository/ExistenciaProductoRepository.java`
+Accede a la tabla de existencias. Tiene un método para buscar la existencia de un producto específico por su `idProducto`.
+**Modificar si:** necesitas nuevas consultas sobre el stock total.
 
-## 8. Instalación por Sistema Operativo
+#### `repository/LoteRepository.java`
+Accede a la tabla de lotes. Tiene una query personalizada que devuelve los lotes con stock > 0 ordenados por fecha de ingreso (para FIFO).
+**Modificar si:** necesitas buscar lotes por otro criterio (ej. por fecha de vencimiento próxima).
 
-Esta sección describe cómo preparar un entorno de desarrollo desde cero. Los pasos exactos pueden variar según la versión del sistema operativo, pero esta guía cubre el escenario más común.
+#### `service/InventarioService.java`
+Lógica del inventario. Dos operaciones importantes:
+- `agregarStock`: crea un lote nuevo y suma al total de existencias. Publica un evento `"lote_creado"` a RabbitMQ.
+- `reducirStock`: aplica FIFO (reduce primero del lote más antiguo con stock). Publica un evento `"inventario_reducido"`.
+**Modificar si:** quieres cambiar la política de reducción (ej. de FIFO a FEFO por fecha de vencimiento).
 
-### 8.1 macOS
+#### `controller/InventarioController.java`
+Define los 6 endpoints de `/api/inventario`.
+**Modificar si:** necesitas un nuevo endpoint (ej. transferencia entre ubicaciones).
 
-Herramientas recomendadas:
+#### `configuracion/ConfiguracionRabbitMQ.java`
+Declara la cola `"cola-auditoria"` como durable (sobrevive reinicios).
+**Modificar si:** necesitas agregar más colas o exchanges de RabbitMQ.
 
-- Homebrew
-- JDK 17
-- Maven
-- Node.js LTS
-- RabbitMQ
+---
 
-Instalación sugerida:
+### audit-service — Registro de eventos del sistema
 
-```bash
-# Homebrew (si no existe)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+#### `entity/EventoAuditoria.java`
+Tabla `eventos_auditoria`. Guarda cada evento con: tipo de evento, ID del elemento afectado, contenido (detalle), y fecha/hora automática.
+**Modificar si:** necesitas guardar más información en cada evento (ej. el usuario que lo ejecutó).
 
-# Java 17
-brew install openjdk@17
+#### `repository/EventoAuditoriaRepository.java`
+Permite buscar eventos por `idAgregado` (el ID del objeto afectado) o por `tipoEvento`.
+**Modificar si:** necesitas nuevas formas de consultar el historial.
 
-# Maven
-brew install maven
+#### `service/EventoAuditoriaService.java`
+Tiene dos responsabilidades:
+1. Consultar eventos (para el controller).
+2. `procesarMensaje`: escucha la cola `"cola-auditoria"` de RabbitMQ. Recibe mensajes con formato `"tipoEvento:idAgregado:contenido"` y los guarda en la BD.
+**Modificar si:** cambias el formato del mensaje de RabbitMQ o agregas lógica antes de guardar el evento.
 
-# Node.js LTS
-brew install node
+#### `controller/EventoAuditoriaController.java`
+Define 3 endpoints de solo lectura en `/api/auditoria`. No hay creación manual de eventos: siempre vienen por RabbitMQ.
+**Modificar si:** necesitas agregar filtros (ej. por rango de fechas).
 
-# RabbitMQ
-brew install rabbitmq
-brew services start rabbitmq
-```
+#### `configuracion/ConfiguracionRabbitMQ.java`
+Declara la cola `"cola-auditoria"`. Debe coincidir con la misma cola declarada en los otros servicios que publican eventos.
+**Modificar si:** cambias el nombre de la cola (deberás cambiarlo en todos los servicios).
 
-Verificaciones útiles:
+---
 
-```bash
-java -version
-mvn -version
-node -v
-npm -v
-rabbitmqctl status
-```
+### scanner-service — Ventas en caja y ventas online
 
-Notas:
+#### `dto/ProductoResumenDto.java`
+Objeto que recibe cuando le pregunta al product-service por un producto. Solo tiene los campos que necesita: `idProducto`, `codigoProducto`, `nombreProducto`.
+**Modificar si:** necesitas más datos del producto en el proceso de escaneo (ej. precio).
 
-- Si tu terminal usa otra versión de Java por defecto, exporta `JAVA_HOME` apuntando al JDK 17.
-- Si RabbitMQ ya estaba instalado, `brew services restart rabbitmq` suele bastar.
+#### `dto/ExistenciaProductoDto.java`
+Objeto que recibe del inventory-service con el stock disponible de un producto.
+**Modificar si:** necesitas más campos del inventario en el proceso de venta.
 
-### 8.2 Windows
+#### `client/ClienteProductos.java`
+Interface Feign que hace llamadas HTTP al `product-service`. Tiene dos métodos: buscar producto por código de barras y cambiar su estado.
+**Modificar si:** necesitas llamar a más endpoints del product-service desde el scanner.
 
-Herramientas recomendadas:
+#### `client/ClienteInventario.java`
+Interface Feign que hace llamadas HTTP al `inventory-service`. Obtiene el stock disponible y reduce el stock.
+**Modificar si:** necesitas usar más endpoints del inventory-service desde el scanner.
 
-- JDK 17
-- Maven
-- Node.js LTS
-- RabbitMQ Server
-- Git Bash o PowerShell
+#### `service/EscaneoService.java`
+Lógica central del escáner:
+- `procesarEscaneo`: busca el producto por código de barras, verifica stock, reduce inventario, publica evento a RabbitMQ. Si el operación es `"venta"`, descuenta del stock.
+- `procesarVentaOnline`: igual pero recibe el `idProducto` directamente (sin código de barras).
+- `actualizarEstadoProductoSegunStock` (privado): después de cada venta, si el stock llega a 0, desactiva el producto en el product-service.
+**Modificar si:** quieres cambiar el comportamiento del escaneo (ej. agregar descuentos, cambiar qué operaciones se permiten).
 
-Instalación sugerida:
+#### `controller/EscaneoController.java`
+Define 2 endpoints en `/api/escaneo`. El endpoint `/ventas/online` es el que usa el purchase-service para procesar compras web.
+**Modificar si:** necesitas nuevos tipos de operación de escaneo.
 
-1. Instalar JDK 17 desde Adoptium o una distribución equivalente.
-2. Instalar Maven y agregarlo al `PATH`.
-3. Instalar Node.js LTS.
-4. Instalar RabbitMQ y Erlang.
-5. Verificar variables de entorno `JAVA_HOME` y `PATH`.
+#### `configuracion/ConfiguracionRabbitMQ.java`
+Declara la cola `"cola-auditoria"` (igual que en los otros servicios) para poder publicar en ella.
 
-Verificaciones útiles en PowerShell:
+---
 
-```powershell
-java -version
-mvn -version
-node -v
-npm -v
-rabbitmqctl status
-```
+### customer-service — Registro y autenticación de clientes
 
-Notas:
+#### `entity/Cliente.java`
+Tabla `clientes`. Campos: nombre, email (único), contraseña encriptada, ciudad, dirección, teléfono, activo, fechas de registro y actualización (se llenan automáticamente con `@PrePersist` / `@PreUpdate`).
+**Modificar si:** necesitas guardar más datos del cliente (ej. fecha de nacimiento, tipo de cliente).
 
-- RabbitMQ en Windows requiere Erlang instalado previamente o incluido según el instalador usado.
-- Si `mvn` no responde, casi siempre es un problema de `PATH`.
+#### `repository/ClienteRepository.java`
+Solo tiene un método extra: buscar cliente por email (para el login y para verificar que el email no se repita).
+**Modificar si:** necesitas buscar clientes por otro campo.
 
-### 8.3 Linux
+#### `dto/ClienteRegistroRequest.java`
+Los datos que debe enviar el frontend para registrar un cliente. Tiene validaciones: email válido, nombre no vacío.
+**Modificar si:** quieres pedir más datos en el registro.
 
-Paquetes base habituales:
+#### `dto/LoginRequest.java`
+Los datos del login: solo email y contraseña.
+**Modificar si:** quieres cambiar el método de autenticación.
 
-- OpenJDK 17
-- Maven
-- Node.js LTS
-- npm
-- RabbitMQ
+#### `dto/ClienteActualizarRequest.java`
+Los datos que puede actualizar un cliente: nombre, ciudad, dirección, teléfono. No puede cambiar email ni contraseña desde aquí.
+**Modificar si:** quieres permitir actualizar más campos (ej. agregar cambio de contraseña).
 
-Ejemplo para Debian/Ubuntu:
+#### `dto/ClienteResponse.java`
+Lo que se devuelve al frontend cuando consulta un cliente. Nunca incluye la contraseña. Tiene un método estático `fromEntity(Cliente)` que convierte la entidad a este DTO.
+**Modificar si:** quieres incluir más datos en la respuesta (ej. número de pedidos).
 
-```bash
-sudo apt update
-sudo apt install -y openjdk-17-jdk maven nodejs npm rabbitmq-server
-sudo systemctl enable rabbitmq-server
-sudo systemctl start rabbitmq-server
-```
+#### `service/ClienteService.java`
+Lógica de registro y autenticación:
+- `registrar`: verifica que el email no exista, encripta la contraseña con BCrypt antes de guardarla.
+- `login`: busca el cliente por email, verifica la contraseña con BCrypt (`passwordEncoder.matches`).
+- `actualizarPerfil`: actualiza solo los campos permitidos.
+**Modificar si:** cambias la lógica de autenticación o el algoritmo de encriptación.
 
-Verificaciones útiles:
+#### `controller/ClienteController.java`
+Define los 4 endpoints de `/api/clientes`.
+**Modificar si:** necesitas agregar un endpoint (ej. cambiar contraseña, eliminar cuenta).
 
-```bash
-java -version
-mvn -version
-node -v
-npm -v
-sudo rabbitmqctl status
-```
+#### `controller/GlobalExceptionHandler.java`
+Captura errores globalmente. Si el service lanza `IllegalArgumentException` (ej. "email ya registrado"), devuelve un JSON de error en vez de un stacktrace. También formatea los errores de validación (`@Valid`) con código HTTP 422.
+**Modificar si:** quieres personalizar el formato de los errores o capturar otros tipos de excepción.
 
-Notas:
+---
 
-- En algunas distribuciones conviene instalar Node.js desde `nvm` o repositorios oficiales si el paquete del sistema está muy desactualizado.
-- Si usas firewall local, asegúrate de no bloquear puertos relevantes en tus pruebas.
+### purchase-service — Checkout y historial de pedidos
 
-## 9. Cómo Levantar el Proyecto
+#### `entity/Pedido.java`
+Tabla `pedidos`. Cabecera del pedido: cliente, estado, método de pago, referencia de pago, total, dirección de entrega, fechas. Tiene una lista de items (`@OneToMany`).
+**Modificar si:** necesitas guardar más datos del pedido (ej. código de descuento, envío).
 
-## 9.1 Orden recomendado de arranque
+#### `entity/PedidoItem.java`
+Tabla `pedido_items`. Cada línea del pedido: producto, precio unitario al momento de compra, cantidad, subtotal. Al guardar el nombre y precio del producto en el item se asegura que el historial no cambie si el producto cambia de precio.
+**Modificar si:** necesitas guardar más datos por item (ej. número de lote).
 
-1. RabbitMQ.
-2. `eureka-server`.
-3. Servicios de dominio backend.
-4. Frontend.
+#### `repository/PedidoRepository.java`
+Tiene un método para obtener los pedidos de un cliente ordenados del más reciente al más antiguo.
+**Modificar si:** necesitas filtrar pedidos por estado o por rango de fechas.
 
-## 9.2 Comandos backend
+#### `dto/CheckoutRequest.java`
+Lo que envía el frontend al hacer checkout: cliente, método de pago, datos de tarjeta (titular, número, vencimiento, CVV), dirección de entrega, y la lista de items.
+**Modificar si:** quieres agregar más datos al proceso de pago (ej. cupón de descuento).
 
-Desde la raíz del proyecto:
+#### `dto/CheckoutItemRequest.java`
+Cada item del checkout: `idProducto` y `cantidad`.
+**Modificar si:** necesitas enviar más datos por item (ej. notas especiales).
 
-```bash
-# Eureka
-mvn spring-boot:run -pl eureka-server
+#### `dto/ProductoResumenDto.java`
+Datos del producto que este servicio recibe del product-service: id, código, nombre, precio, si está activo.
+**Modificar si:** necesitas más campos del producto en el proceso de checkout.
 
-# Productos
-mvn spring-boot:run -pl product-service
+#### `dto/PedidoResponse.java` / `dto/PedidoItemResponse.java`
+Lo que se devuelve al frontend al consultar pedidos. Incluye todos los datos del pedido y sus items.
+**Modificar si:** quieres incluir más datos en la respuesta del pedido.
 
-# Inventario
-mvn spring-boot:run -pl inventory-service
+#### `client/ClienteProductos.java`
+Llama al product-service para obtener los datos de un producto por su ID (para calcular el precio).
+**Modificar si:** necesitas llamar a más endpoints del product-service.
 
-# Auditoría
-mvn spring-boot:run -pl audit-service
+#### `client/ClienteEscaneo.java`
+Llama al scanner-service para procesar la venta online de cada item del pedido. Es el puente entre la compra web y el descuento de inventario.
+**Modificar si:** necesitas cambiar cómo se comunica con el scanner-service.
 
-# Escáner
-mvn spring-boot:run -pl scanner-service
+#### `service/PedidoService.java`
+Lógica del checkout:
+1. Crea el pedido con estado `"PAGADO"`.
+2. Genera una referencia de pago simulada `"SIM-" + UUID`.
+3. Para cada item: consulta el producto, verifica que esté activo, llama al scanner-service para descontar el stock, guarda el precio actual del producto en el item.
+4. Calcula el total y guarda todo.
+**Modificar si:** quieres integrar un pasarela de pago real, aplicar descuentos, o cambiar el flujo del checkout.
 
-# Clientes
-mvn spring-boot:run -pl customer-service
+#### `controller/PedidoController.java`
+Define los 3 endpoints de `/api/pedidos`.
+**Modificar si:** necesitas agregar endpoints (ej. cancelar pedido, cambiar estado).
 
-# Compras / pedidos
-mvn spring-boot:run -pl purchase-service
-```
+#### `controller/GlobalExceptionHandler.java`
+Igual que en customer-service: captura errores y los devuelve como JSON formateado.
 
-## 9.3 Frontend
+---
 
-Desde `frontend/`:
+### eureka-server — Registro de servicios
 
-```bash
-npm install
-npm run dev
-```
-
-Opcionales:
-
-```bash
-npm run build
-npm run preview
-npm run tunnel
-```
-
-## 9.4 Build general
-
-Desde la raíz:
-
-```bash
-mvn clean install
-```
-
-## 10. Frontend: Qué Hace y Cómo Entenderlo
-
-El frontend concentra tres experiencias de usuario:
-
-- Administrador.
-- Bodega.
-- Cliente final.
-
-### 10.1 Enrutamiento principal
-
-Rutas principales:
-
-- `/admin`
-- `/bodega`
-- `/cliente/auth`
-- `/cliente/catalogo`
-- `/cliente/carrito`
-- `/cliente/checkout`
-- `/cliente/compra-exitosa`
-- `/cliente/pedidos`
-- `/cliente/cuenta`
-
-### 10.2 Archivos importantes del frontend
-
-| Ruta | Propósito |
-|---|---|
-| `frontend/src/main.jsx` | Bootstrap React y definición de rutas |
-| `frontend/src/App.jsx` | Shell principal de admin/bodega |
-| `frontend/src/pages/AdministradorPage.jsx` | Vista administrativa |
-| `frontend/src/pages/BodegaPage.jsx` | Flujo de escaneo y stock |
-| `frontend/src/pages/ClientePage.jsx` | Layout y subpáginas del portal cliente |
-| `frontend/src/api/administradorApi.js` | Cliente HTTP para productos, inventario, escaneo y ventas recientes |
-| `frontend/src/api/clienteApi.js` | Cliente HTTP para autenticación, perfil y pedidos |
-| `frontend/src/components/bodega/LectorCodigoBarras.jsx` | Escaneo con cámara usando `html5-qrcode` |
-| `frontend/src/components/productos/*` | Formularios y tabla del catálogo |
-| `frontend/src/components/inventario/*` | Stock, existencias y lotes |
-| `frontend/src/index.css` | Estilos globales de toda la UI |
-
-### 10.3 Proxy de desarrollo
-
-`frontend/vite.config.js` enruta localmente:
-
-- `/api/productos` -> `http://127.0.0.1:8081`
-- `/api/inventario` -> `http://127.0.0.1:8082`
-- `/api/escaneo` -> `http://127.0.0.1:8084`
-- `/api/clientes` -> `http://127.0.0.1:8085`
-- `/api/pedidos` -> `http://127.0.0.1:8086`
-
-Eso permite que el frontend haga `fetch('/api/...')` sin conocer URLs absolutas durante desarrollo.
-
-### 10.4 Experiencia de Administrador
-
-La vista administrativa agrupa funciones de catálogo y consulta de ventas.
-
-Responsabilidades principales:
-
-- Listar productos.
-- Buscar productos por nombre.
-- Crear productos.
-- Editar productos.
-- Cambiar estado activo/inactivo.
-- Consultar ventas recientes mediante `purchase-service`.
-
-### 10.5 Experiencia de Bodega
-
-La vista de bodega está orientada a operación física.
-
-Responsabilidades principales:
-
-- Escanear código de barras desde cámara.
-- Buscar productos.
-- Registrar stock por lote.
-- Consultar existencias.
-- Editar productos existentes.
-
-El componente `LectorCodigoBarras` usa `html5-qrcode` y puede requerir HTTPS o túnel en ciertos dispositivos móviles.
-
-### 10.6 Experiencia de Cliente
-
-El portal cliente está centralizado en `ClientePage.jsx` y contiene varias subpáginas exportadas en el mismo archivo.
-
-Subpáginas actuales:
-
-- `ClienteAuthPage`
-- `ClienteCatalogoPage`
-- `ClienteCarritoPage`
-- `ClienteCheckoutPage`
-- `ClienteCompraExitosaPage`
-- `ClientePedidosPage`
-- `ClientePerfilPage`
-
-Responsabilidades del portal cliente:
-
-- Registro e inicio de sesión.
-- Persistencia de sesión y carrito en navegador.
-- Navegación de catálogo.
-- Agregado y retiro de productos en carrito.
-- Checkout.
-- Historial de pedidos.
-- Edición de perfil.
-
-## 11. Backend: Cómo Entender Cada Servicio
-
-Cada microservicio sigue un patrón bastante consistente:
-
-1. `controller/` expone HTTP.
-2. `service/` implementa reglas de negocio.
-3. `repository/` accede a base de datos.
-4. `entity/` representa el modelo persistente.
-5. `dto/` aparece donde el servicio necesita contratos explícitos de entrada/salida.
-6. `client/` aparece cuando un servicio llama a otro por Feign.
-7. `configuracion/` agrupa piezas de soporte como RabbitMQ.
-
-Si alguien nuevo entra al proyecto, la ruta mental correcta es:
-
-1. Leer el controller.
-2. Ver qué método del service invoca.
-3. Revisar qué entidades y repositorios toca.
-4. Confirmar si publica eventos o llama a otros microservicios.
-
-## 12. Servicio por Servicio
-
-## 12.1 `eureka-server`
-
-Responsabilidad:
-
-- Registrar y descubrir microservicios.
-
-Qué mirar para entenderlo:
-
-- `application.properties` para configuración base.
-- La clase `EurekaServerApplication` para el arranque del servidor.
-
-Notas:
-
-- No maneja dominio de negocio.
-- Debe iniciar antes que los servicios que se registran.
-
-## 12.2 `product-service`
-
-Responsabilidad:
-
-- Mantener el catálogo maestro de productos.
-
-Estructura relevante:
-
-- `controller/ProductoController.java`
-- `service/ProductoService.java`
-- `entity/Producto.java`
-- `repository/ProductoRepository.java`
-
-Qué hace:
-
-- Lista todos los productos.
-- Obtiene producto por ID.
-- Busca por código de barras.
-- Busca por nombre.
-- Crea productos.
-- Actualiza atributos del producto.
-- Cambia el estado activo/inactivo.
-- Elimina productos.
-
-Detalle importante de negocio:
-
-- Cuando se crea un producto y no se especifica `activo`, el servicio lo inicializa en `false`.
-- `scanner-service` puede desactivar automáticamente un producto si el stock llega a cero.
-
-Endpoints:
-
-- `GET /api/productos`
-- `GET /api/productos/{id}`
-- `GET /api/productos/codigo/{codigo}`
-- `GET /api/productos/buscar?nombre=...`
-- `POST /api/productos`
-- `PUT /api/productos/{id}`
-- `PUT /api/productos/{id}/estado?activo=true|false`
-- `DELETE /api/productos/{id}`
-
-## 12.3 `inventory-service`
-
-Responsabilidad:
-
-- Llevar las existencias y los lotes por producto.
-
-Estructura relevante:
-
-- `controller/InventarioController.java`
-- `service/InventarioService.java`
-- `entity/ExistenciaProducto.java`
-- `entity/Lote.java`
-- `repository/ExistenciaProductoRepository.java`
-- `repository/LoteRepository.java`
-- `configuracion/ConfiguracionRabbitMQ.java`
-
-Qué hace:
-
-- Consulta existencias globales o por producto.
-- Consulta lotes por producto.
-- Registra nuevos lotes y suma existencias.
-- Reduce stock.
-- Lista lotes próximos a vencer.
-
-Regla de negocio clave:
-
-- La reducción de stock usa FIFO: descuenta primero de los lotes más antiguos.
-
-Integración con auditoría:
-
-- Publica mensajes en `cola-auditoria` al crear lotes.
-- Publica mensajes en `cola-auditoria` al reducir inventario.
-
-Endpoints:
-
-- `GET /api/inventario/existencias`
-- `GET /api/inventario/existencias/{idProducto}`
-- `GET /api/inventario/lotes/{idProducto}`
-- `POST /api/inventario/agregar-stock?idProducto=...&numeroLote=...&cantidad=...&fechaVencimiento=YYYY-MM-DD`
-- `POST /api/inventario/reducir-stock?idProducto=...&cantidad=...`
-- `GET /api/inventario/lotes-por-vencer?fechaLimite=YYYY-MM-DD`
-
-## 12.4 `scanner-service`
-
-Responsabilidad:
-
-- Ser la capa operativa para ventas disparadas por escaneo físico y para ventas online que necesitan afectar inventario.
-
-Estructura relevante:
-
-- `controller/EscaneoController.java`
-- `service/EscaneoService.java`
-- `client/ClienteInventario.java`
-- `client/ClienteProductos.java`
-- `configuracion/ConfiguracionRabbitMQ.java`
-
-Qué hace:
-
-- Recibe un código de barras y una operación.
-- Busca el producto por código en `product-service`.
-- Si la operación es venta, reduce stock en `inventory-service`.
-- Si el stock queda en cero, intenta desactivar el producto en `product-service`.
-- Publica evento de auditoría.
-- Atiende ventas online por `idProducto`, sin pasar por código de barras.
-
-Endpoints:
-
-- `POST /api/escaneo?codigoBarras=...&operacion=venta&cantidad=...`
-- `POST /api/escaneo/ventas/online?idProducto=...&cantidad=...`
-
-Detalle importante:
-
-- La venta puede completarse aunque falle la sincronización de estado activo/inactivo del producto; esa falla no revierte la salida de stock.
-
-## 12.5 `audit-service`
-
-Responsabilidad:
-
-- Registrar y consultar eventos de auditoría del sistema.
-
-Estructura relevante:
-
-- `controller/EventoAuditoriaController.java`
-- `service/EventoAuditoriaService.java`
-- `entity/EventoAuditoria.java`
-- `repository/EventoAuditoriaRepository.java`
-- `configuracion/ConfiguracionRabbitMQ.java`
-
-Qué hace:
-
-- Expone consultas de eventos.
-- Escucha la cola RabbitMQ `cola-auditoria`.
-- Convierte mensajes con formato `tipoEvento:idAgregado:contenido` en entidades persistidas.
-
-Endpoints:
-
-- `GET /api/auditoria/eventos`
-- `GET /api/auditoria/eventos/agregado/{idAgregado}`
-- `GET /api/auditoria/eventos/tipo/{tipoEvento}`
-
-## 12.6 `customer-service`
-
-Responsabilidad:
-
-- Gestionar la identidad básica del cliente.
-
-Estructura relevante:
-
-- `controller/ClienteController.java`
-- `service/ClienteService.java`
-- `entity/Cliente.java`
-- `dto/*`
-- `repository/ClienteRepository.java`
-
-Qué hace:
-
-- Registro de cliente.
-- Inicio de sesión.
-- Consulta por ID.
-- Actualización de perfil.
-
-Reglas de negocio:
-
-- El email se normaliza a minúsculas.
-- La contraseña se almacena con `BCryptPasswordEncoder`.
-- Un cliente inactivo no puede iniciar sesión.
-
-Endpoints:
-
-- `POST /api/clientes/registro`
-- `POST /api/clientes/login`
-- `GET /api/clientes/{idCliente}`
-- `PUT /api/clientes/{idCliente}`
-
-## 12.7 `purchase-service`
-
-Responsabilidad:
-
-- Modelar y persistir pedidos del canal online.
-
-Estructura relevante:
-
-- `controller/PedidoController.java`
-- `service/PedidoService.java`
-- `entity/Pedido.java`
-- `entity/PedidoItem.java`
-- `dto/*`
-- `client/ClienteProductos.java`
-- `client/ClienteEscaneo.java`
-- `repository/PedidoRepository.java`
-
-Qué hace:
-
-- Recibe el checkout del cliente.
-- Valida que cada producto exista y esté activo.
-- Para cada ítem delega la venta online a `scanner-service`.
-- Calcula subtotales y total.
-- Genera una referencia de pago simulada.
-- Persiste el pedido con estado `PAGADO`.
-- Lista pedidos por cliente.
-- Lista todos los pedidos para el panel administrativo.
-
-Endpoints:
-
-- `POST /api/pedidos/checkout`
-- `GET /api/pedidos/cliente/{idCliente}`
-- `GET /api/pedidos`
-
-Detalle importante:
-
-- `purchase-service` no descuenta inventario directamente; usa `scanner-service` como punto de entrada de la salida de stock.
-
-## 13. Flujos de Negocio Importantes
-
-## 13.1 Alta de producto
-
-1. Admin crea un producto en `product-service`.
-2. El producto queda disponible en catálogo de administración.
-3. Si no se marca activo, el backend lo deja inactivo por defecto.
-
-## 13.2 Ingreso de stock
-
-1. Bodega identifica el producto.
-2. Registra lote, cantidad y fecha de vencimiento.
-3. `inventory-service` crea el lote.
-4. Actualiza la existencia acumulada del producto.
-5. Publica evento `lote_creado` en RabbitMQ.
-6. `audit-service` lo persiste.
-
-## 13.3 Venta física por escaneo
-
-1. Bodega escanea código de barras.
-2. `scanner-service` consulta el producto por código.
-3. `inventory-service` reduce stock con FIFO.
-4. `scanner-service` valida si el stock llegó a cero.
-5. Si corresponde, desactiva el producto en `product-service`.
-6. Publica `venta_realizada` en auditoría.
-
-## 13.4 Compra online
-
-1. Cliente inicia sesión y arma carrito.
-2. Frontend envía checkout a `purchase-service`.
-3. `purchase-service` valida cada producto contra `product-service`.
-4. `purchase-service` llama a `scanner-service` para cada venta online.
-5. `scanner-service` reduce inventario y emite auditoría.
-6. `purchase-service` persiste el pedido con detalle de ítems.
-7. Frontend muestra la compra exitosa y el historial queda disponible.
-
-## 14. Cómo Navegar el Código Rápidamente
-
-Si quieres entender una funcionalidad específica, esta es la mejor ruta de lectura:
-
-### Ver catálogo o producto
-
-1. `frontend/src/api/administradorApi.js`
-2. `product-service/controller/ProductoController.java`
-3. `product-service/service/ProductoService.java`
-
-### Ver stock y lotes
-
-1. `frontend/src/components/inventario/*`
-2. `inventory-service/controller/InventarioController.java`
-3. `inventory-service/service/InventarioService.java`
-
-### Ver escaneo por cámara
-
-1. `frontend/src/components/bodega/LectorCodigoBarras.jsx`
-2. `scanner-service/controller/EscaneoController.java`
-3. `scanner-service/service/EscaneoService.java`
-
-### Ver login y perfil cliente
-
-1. `frontend/src/api/clienteApi.js`
-2. `frontend/src/pages/ClientePage.jsx`
-3. `customer-service/controller/ClienteController.java`
-4. `customer-service/service/ClienteService.java`
-
-### Ver checkout y pedidos
-
-1. `frontend/src/pages/ClientePage.jsx`
-2. `frontend/src/api/clienteApi.js`
-3. `purchase-service/controller/PedidoController.java`
-4. `purchase-service/service/PedidoService.java`
-
-### Ver auditoría
-
-1. Buscar `convertAndSend("cola-auditoria", ...)` en productores.
-2. Revisar `audit-service/service/EventoAuditoriaService.java`.
-
-## 15. Convenciones de Organización
-
-Patrones observables en el repositorio:
-
-- Un microservicio por responsabilidad de negocio.
-- Base de datos propia por servicio persistente.
-- Controladores delgados y lógica en `service/`.
-- Feign clients para comunicación HTTP entre servicios.
-- Cola RabbitMQ compartida para trazabilidad asíncrona.
-- Frontend con `fetch` simple, sin capa de estado global externa.
-- CSS centralizado en un único archivo grande (`index.css`).
-
-## 16. Ejemplos de Requests y Responses
-
-Los siguientes ejemplos buscan acelerar pruebas manuales y comprensión del contrato HTTP. Los campos exactos pueden variar si el modelo evoluciona, pero reflejan la intención actual del sistema.
-
-### 16.1 `product-service`
-
-#### Crear producto
-
-Request:
-
-```http
-POST /api/productos
-Content-Type: application/json
-
-{
-	"codigoProducto": "7701234567890",
-	"nombreProducto": "Cafe Organico 500g",
-	"descripcionProducto": "Cafe tostado molido",
-	"categoriaProducto": "Bebidas",
-	"precioProducto": 18500,
-	"unidadMedida": "unidad",
-	"imagenUrl": "https://ejemplo.com/cafe.png",
-	"activo": true
-}
-```
-
-Response esperada:
-
-```json
-{
-	"idProducto": 1,
-	"codigoProducto": "7701234567890",
-	"nombreProducto": "Cafe Organico 500g",
-	"descripcionProducto": "Cafe tostado molido",
-	"categoriaProducto": "Bebidas",
-	"precioProducto": 18500,
-	"unidadMedida": "unidad",
-	"imagenUrl": "https://ejemplo.com/cafe.png",
-	"activo": true
-}
-```
-
-#### Buscar por nombre
-
-Request:
-
-```http
-GET /api/productos/buscar?nombre=cafe
-```
-
-Response esperada:
-
-```json
-[
-	{
-		"idProducto": 1,
-		"codigoProducto": "7701234567890",
-		"nombreProducto": "Cafe Organico 500g",
-		"categoriaProducto": "Bebidas",
-		"precioProducto": 18500,
-		"activo": true
-	}
-]
-```
-
-#### Cambiar estado
-
-Request:
-
-```http
-PUT /api/productos/1/estado?activo=false
-```
-
-Response esperada:
-
-```json
-{
-	"idProducto": 1,
-	"activo": false
-}
-```
-
-### 16.2 `inventory-service`
-
-#### Registrar stock
-
-Request:
-
-```http
-POST /api/inventario/agregar-stock?idProducto=1&numeroLote=L001&cantidad=25&fechaVencimiento=2026-12-31
-```
-
-Response esperada:
-
-```json
-{
-	"id": 1,
-	"idProducto": 1,
-	"cantidadTotal": 25
-}
-```
-
-#### Consultar existencia
-
-Request:
-
-```http
-GET /api/inventario/existencias/1
-```
-
-Response esperada:
-
-```json
-{
-	"id": 1,
-	"idProducto": 1,
-	"cantidadTotal": 25
-}
-```
-
-#### Reducir stock
-
-Request:
-
-```http
-POST /api/inventario/reducir-stock?idProducto=1&cantidad=2
-```
-
-Response exitosa:
-
-```text
-Stock reducido exitosamente
-```
-
-Response con error:
-
-```text
-Stock insuficiente o producto no encontrado
-```
-
-### 16.3 `scanner-service`
-
-#### Venta por escaneo físico
-
-Request:
-
-```http
-POST /api/escaneo?codigoBarras=7701234567890&operacion=venta&cantidad=1
-```
-
-Response exitosa:
-
-```text
-Venta procesada exitosamente
-```
-
-Response con error:
-
-```text
-No existe un producto con ese codigo de barras
-```
-
-#### Venta online por ID de producto
-
-Request:
-
-```http
-POST /api/escaneo/ventas/online?idProducto=1&cantidad=2
-```
-
-Response esperada:
-
-```text
-Venta online procesada exitosamente
-```
-
-### 16.4 `customer-service`
-
-#### Registro de cliente
-
-Request:
-
-```http
-POST /api/clientes/registro
-Content-Type: application/json
-
-{
-	"nombre": "Sara Correales",
-	"email": "sara@example.com",
-	"password": "MiClave123",
-	"ciudad": "Bogota",
-	"direccion": "Calle 123 #45-67",
-	"telefono": "3001234567"
-}
-```
-
-Response esperada:
-
-```json
-{
-	"idCliente": 7,
-	"nombre": "Sara Correales",
-	"email": "sara@example.com",
-	"ciudad": "Bogota",
-	"direccion": "Calle 123 #45-67",
-	"telefono": "3001234567",
-	"activo": true
-}
-```
-
-#### Login
-
-Request:
-
-```http
-POST /api/clientes/login
-Content-Type: application/json
-
-{
-	"email": "sara@example.com",
-	"password": "MiClave123"
-}
-```
-
-Response esperada:
-
-```json
-{
-	"idCliente": 7,
-	"nombre": "Sara Correales",
-	"email": "sara@example.com",
-	"ciudad": "Bogota",
-	"direccion": "Calle 123 #45-67",
-	"telefono": "3001234567",
-	"activo": true
-}
-```
-
-### 16.5 `purchase-service`
-
-#### Checkout
-
-Request:
-
-```http
-POST /api/pedidos/checkout
-Content-Type: application/json
-
-{
-	"idCliente": 7,
-	"metodoPago": "TARJETA",
-	"ciudadEntrega": "Bogota",
-	"direccionEntrega": "Calle 123 #45-67",
-	"notas": "Entregar en porteria",
-	"items": [
-		{
-			"idProducto": 1,
-			"cantidad": 2
-		},
-		{
-			"idProducto": 3,
-			"cantidad": 1
-		}
-	]
-}
-```
-
-Response esperada:
-
-```json
-{
-	"idPedido": 15,
-	"idCliente": 7,
-	"estado": "PAGADO",
-	"metodoPago": "TARJETA",
-	"total": 54000,
-	"moneda": "COP",
-	"fechaCreacion": "2026-04-03T19:15:30",
-	"items": [
-		{
-			"idProducto": 1,
-			"codigoProducto": "7701234567890",
-			"nombreProducto": "Cafe Organico 500g",
-			"precioUnitario": 18500,
-			"cantidad": 2,
-			"subtotal": 37000
-		},
-		{
-			"idProducto": 3,
-			"codigoProducto": "7700000000003",
-			"nombreProducto": "Pan Integral",
-			"precioUnitario": 17000,
-			"cantidad": 1,
-			"subtotal": 17000
-		}
-	]
-}
-```
-
-#### Pedidos por cliente
-
-Request:
-
-```http
-GET /api/pedidos/cliente/7
-```
-
-Response esperada:
-
-```json
-[
-	{
-		"idPedido": 15,
-		"idCliente": 7,
-		"estado": "PAGADO",
-		"total": 54000,
-		"moneda": "COP"
-	}
-]
-```
-
-#### Ventas recientes para administración
-
-Request:
-
-```http
-GET /api/pedidos
-```
-
-Response esperada:
-
-```json
-[
-	{
-		"idPedido": 15,
-		"idCliente": 7,
-		"estado": "PAGADO",
-		"total": 54000,
-		"moneda": "COP"
-	},
-	{
-		"idPedido": 14,
-		"idCliente": 2,
-		"estado": "PAGADO",
-		"total": 22000,
-		"moneda": "COP"
-	}
-]
-```
-
-### 16.6 `audit-service`
-
-#### Listar eventos
-
-Request:
-
-```http
-GET /api/auditoria/eventos
-```
-
-Response esperada:
-
-```json
-[
-	{
-		"idEvento": 101,
-		"tipoEvento": "venta_realizada",
-		"idAgregado": "1",
-		"contenido": "cantidad=2,canal=online"
-	},
-	{
-		"idEvento": 102,
-		"tipoEvento": "inventario_reducido",
-		"idAgregado": "1",
-		"contenido": "cantidad=2"
-	}
-]
-```
-
-#### Filtrar por tipo
-
-Request:
-
-```http
-GET /api/auditoria/eventos/tipo/venta_realizada
-```
-
-Response esperada:
-
-```json
-[
-	{
-		"idEvento": 101,
-		"tipoEvento": "venta_realizada",
-		"idAgregado": "1",
-		"contenido": "cantidad=2,canal=online"
-	}
-]
-```
-
-## 17. Estado Actual del Proyecto
-
-El sistema actualmente ya cubre:
-
-- Portal administrativo.
-- Flujo de bodega.
-- Portal cliente completo con auth y checkout.
-- Ventas recientes en administración.
-- Edición de productos.
-- Animaciones y mejoras visuales en la página de autenticación del cliente.
-
-También hay algunas características a tener presentes:
-
-- El login cliente es funcional, pero no usa JWT ni sesiones servidor.
-- El frontend depende del proxy de Vite en desarrollo.
-- La configuración sensible sigue embebida en propiedades y debería externalizarse.
-- No hay documentación de pruebas automatizadas en el estado actual del repositorio.
-
-## 18. Problemas Comunes y Diagnóstico
-
-### Un endpoint responde 404 desde el frontend
-
-Revisar:
-
-- Que el microservicio correcto esté levantado.
-- Que Vite esté corriendo en `5173`.
-- Que el proxy de `vite.config.js` apunte al puerto correcto.
-
-### El escaneo de cámara no funciona en celular
-
-Revisar:
-
-- Permisos de cámara del navegador.
-- Si el navegador exige HTTPS.
-- Si el acceso se hace desde un dominio expuesto por túnel.
-
-### Un producto aparece pero no se puede vender
-
-Revisar:
-
-- Si está `activo`.
-- Si tiene stock real en `inventory-service`.
-- Si `scanner-service` puede reducir stock correctamente.
-
-### El pedido no aparece en ventas recientes
-
-Revisar:
-
-- Que `purchase-service` esté corriendo.
-- Que el endpoint `GET /api/pedidos` responda.
-- Que el frontend esté consultando el servicio correcto vía proxy.
-
-## 19. Próximas Mejoras Recomendadas
-
-- Externalizar configuración sensible.
-- Agregar perfiles `dev`, `test`, `prod`.
-- Añadir pruebas unitarias e integración por servicio.
-- Incorporar autenticación robusta para clientes y roles internos.
-- Separar `ClientePage.jsx` en múltiples archivos para reducir tamaño y acoplamiento.
-- Modularizar `frontend/src/index.css` en estilos por feature.
-- Añadir documentación OpenAPI/Swagger por microservicio.
-- Incorporar observabilidad centralizada y trazas distribuidas.
-
-## 20. Resumen Ejecutivo
-
-`Caminos Sostenibles Market` es un sistema de supermercado basado en microservicios que integra catálogo, inventario por lotes, ventas físicas por escaneo, compras online, clientes y auditoría. La solución ya tiene un backend funcional dividido por contexto de negocio y un frontend operativo para tres perfiles: administración, bodega y cliente final.
-
-Si necesitas entender el proyecto rápidamente, empieza por:
-
-1. `README.md`
-2. `frontend/src/main.jsx`
-3. El controller del servicio que te interese.
-4. El service asociado.
-5. Las llamadas Feign o eventos RabbitMQ si el flujo cruza servicios.
+#### `EurekaServerApplication.java`
+La única clase del servicio. `@EnableEurekaServer` es lo que lo convierte en servidor de descubrimiento. Todos los demás servicios se registran aquí al arrancar, y se encuentran entre sí por nombre (ej. `"product-service"`) sin necesidad de IPs fijas.
+**No necesita modificaciones.**

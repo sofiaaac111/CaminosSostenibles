@@ -24,6 +24,7 @@
         <spring-cloud.version>2023.0.0</spring-cloud.version>
         <mysql.version>8.0.33</mysql.version>
         <jackson.version>2.15.2</jackson.version>
+        <springdoc.version>2.3.0</springdoc.version>
     </properties>
 
     <modules>
@@ -54,6 +55,11 @@
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
                 <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
