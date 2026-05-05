@@ -4,11 +4,11 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import purchaseservice.dto.ProductoResumenDto;
+import purchaseservice.schemas.ResumenProducto;
 
-@FeignClient(name = "product-service")
+@FeignClient(name = "product-service", url = "${product-service.url}")
 public interface ClienteProductos {
 
     @GetMapping("/api/productos/{id}")
-    ProductoResumenDto obtenerProductoPorId(@PathVariable("id") Long id);
+    ResumenProducto obtenerProductoPorId(@PathVariable("id") Long id);
 }

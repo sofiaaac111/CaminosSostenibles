@@ -1,41 +1,43 @@
 package purchaseservice.service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import purchaseservice.client.ClienteEscaneo;
+import purchaseservice.client.ClienteInventario;
 import purchaseservice.client.ClienteProductos;
-import purchaseservice.dto.CheckoutItemRequest;
-import purchaseservice.dto.CheckoutRequest;
-import purchaseservice.dto.PedidoItemResponse;
-import purchaseservice.dto.PedidoResponse;
-import purchaseservice.dto.ProductoResumenDto;
-import purchaseservice.entity.Pedido;
-import purchaseservice.entity.PedidoItem;
-import purchaseservice.repository.PedidoRepository;
+import purchaseservice.crud.PedidoRepository;
+import purchaseservice.models.Pedido;
+import purchaseservice.models.PedidoItem;
+import purchaseservice.schemas.DatosPedido;
+import purchaseservice.schemas.FormularioCompra;
+import purchaseservice.schemas.ItemCompra;
+import purchaseservice.schemas.ItemDatosPedido;
+import purchaseservice.schemas.ResumenProducto;
 
 @Service
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
     private final ClienteProductos clienteProductos;
-    private final ClienteEscaneo clienteEscaneo;
+    private final ClienteInventario clienteInventario;
 
     public PedidoService(PedidoRepository pedidoRepository,
-                        ClienteProductos clienteProductos,
-                        ClienteEscaneo clienteEscaneo) {
+                         ClienteProductos clienteProductos,
+                         ClienteInventario clienteInventario) {
         this.pedidoRepository = pedidoRepository;
         this.clienteProductos = clienteProductos;
-        this.clienteEscaneo = clienteEscaneo;
+        this.clienteInventario = clienteInventario;
     }
 
     @Transactional
-    public PedidoResponse checkout(CheckoutRequest request) {
+    public DatosPedido checkout(FormularioCompra request) {
         Pedido pedido = new Pedido();
         pedido.setIdCliente(request.getIdCliente());
         pedido.setEstado("PAGADO");
@@ -47,20 +49,23 @@ public class PedidoService {
         pedido.setNotas(request.getNotas());
 
         BigDecimal total = BigDecimal.ZERO;
+        List<Long> idsReserva = new ArrayList<>();
 
-        for (CheckoutItemRequest itemRequest : request.getItems()) {
-            ProductoResumenDto producto = clienteProductos.obtenerProductoPorId(itemRequest.getIdProducto());
+        // PASO 1: Validar productos y reservar stock para todos los items
+        for (ItemCompra itemRequest : request.getItems()) {
+            ResumenProducto producto = clienteProductos.obtenerProductoPorId(itemRequest.getIdProducto());
             if (producto == null || producto.getIdProducto() == null) {
                 throw new IllegalArgumentException("Producto no encontrado: " + itemRequest.getIdProducto());
             }
             if (Boolean.FALSE.equals(producto.getActivo())) {
-                throw new IllegalArgumentException("Producto inactivo/no disponible: " + producto.getNombreProducto());
+                throw new IllegalArgumentException("Producto no disponible: " + producto.getNombreProducto());
             }
 
-            String respuestaVenta = clienteEscaneo.venderOnline(itemRequest.getIdProducto(), itemRequest.getCantidad());
-            if (respuestaVenta == null || respuestaVenta.toLowerCase().startsWith("error")) {
-                throw new IllegalArgumentException("No se pudo procesar producto " + producto.getNombreProducto() + ": " + respuestaVenta);
-            }
+            Long idReserva = clienteInventario.reservarStock(
+                    itemRequest.getIdProducto(),
+                    itemRequest.getCantidad(),
+                    request.getIdCliente());
+            idsReserva.add(idReserva);
 
             PedidoItem item = new PedidoItem();
             item.setIdProducto(producto.getIdProducto());
@@ -68,37 +73,38 @@ public class PedidoService {
             item.setNombreProducto(producto.getNombreProducto());
             item.setPrecioUnitario(producto.getPrecioProducto());
             item.setCantidad(itemRequest.getCantidad());
-
-            BigDecimal subtotal = producto.getPrecioProducto().multiply(itemRequest.getCantidad());
-            item.setSubtotal(subtotal);
-            total = total.add(subtotal);
-
+            item.setSubtotal(producto.getPrecioProducto().multiply(itemRequest.getCantidad()));
+            total = total.add(item.getSubtotal());
             pedido.agregarItem(item);
         }
 
         pedido.setTotalBruto(total);
         pedido.setTotalFinal(total);
-
         Pedido guardado = pedidoRepository.save(pedido);
+
+        // PASO 2: Confirmar todas las reservas (descuenta el stock real)
+        for (Long idReserva : idsReserva) {
+            ResponseEntity<String> respuesta = clienteInventario.confirmarReserva(idReserva);
+            if (!respuesta.getStatusCode().is2xxSuccessful()) {
+                throw new IllegalArgumentException("Error al confirmar stock: " + respuesta.getBody());
+            }
+        }
+
         return toResponse(guardado);
     }
 
-    public List<PedidoResponse> listarPorCliente(Long idCliente) {
+    public List<DatosPedido> listarPorCliente(Long idCliente) {
         return pedidoRepository.findByIdClienteOrderByFechaCreacionDesc(idCliente)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+                .stream().map(this::toResponse).toList();
     }
 
-    public List<PedidoResponse> listarTodos() {
+    public List<DatosPedido> listarTodos() {
         return pedidoRepository.findAll(Sort.by(Sort.Direction.DESC, "fechaCreacion"))
-                .stream()
-                .map(this::toResponse)
-                .toList();
+                .stream().map(this::toResponse).toList();
     }
 
-    private PedidoResponse toResponse(Pedido pedido) {
-        PedidoResponse response = new PedidoResponse();
+    private DatosPedido toResponse(Pedido pedido) {
+        DatosPedido response = new DatosPedido();
         response.setIdPedido(pedido.getIdPedido());
         response.setIdCliente(pedido.getIdCliente());
         response.setEstado(pedido.getEstado());
@@ -107,8 +113,8 @@ public class PedidoService {
         response.setMoneda(pedido.getMoneda());
         response.setFechaCreacion(pedido.getFechaCreacion());
 
-        List<PedidoItemResponse> items = pedido.getItems().stream().map(item -> {
-            PedidoItemResponse itemResponse = new PedidoItemResponse();
+        List<ItemDatosPedido> items = pedido.getItems().stream().map(item -> {
+            ItemDatosPedido itemResponse = new ItemDatosPedido();
             itemResponse.setIdProducto(item.getIdProducto());
             itemResponse.setCodigoProducto(item.getCodigoProducto());
             itemResponse.setNombreProducto(item.getNombreProducto());

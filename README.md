@@ -174,19 +174,19 @@ purchase-service/src/main/java/purchaseservice/
 
 Dentro de cada una encontrarás siempre las mismas subcarpetas:
 
-| Carpeta          | Qué contiene                                      | Cuándo la tocas                              |
-|------------------|---------------------------------------------------|----------------------------------------------|
-| `entity/`        | La forma de los datos (campos de la tabla en BD)  | Cuando agregas o cambias un campo            |
-| `repository/`    | Cómo buscar datos en la BD                        | Cuando necesitas un nuevo tipo de búsqueda   |
-| `service/`       | Las reglas del negocio                            | Cuando cambias cómo funciona algo            |
-| `controller/`    | Los endpoints que recibe la API                   | Cuando agregas o modificas una ruta HTTP     |
-| `dto/`           | Los datos que entran y salen por la API           | Cuando cambias qué campos recibe o devuelve  |
-| `client/`        | Llamadas a otros microservicios                   | Cuando conectas con otro servicio            |
-| `configuracion/` | Configuración de RabbitMQ                         | Casi nunca                                   |
+| Carpeta      | Equivalente Python  | Qué contiene                                      | Cuándo la tocas                              |
+|--------------|---------------------|---------------------------------------------------|----------------------------------------------|
+| `models/`    | `models.py`         | La forma de los datos (campos de la tabla en BD)  | Cuando agregas o cambias un campo            |
+| `crud/`      | `crud.py`           | Cómo buscar datos en la BD                        | Cuando necesitas un nuevo tipo de búsqueda   |
+| `service/`   | *(sin equivalente)* | Las reglas del negocio                            | Cuando cambias cómo funciona algo            |
+| `routers/`   | `routers/`          | Los endpoints que recibe la API                   | Cuando agregas o modificas una ruta HTTP     |
+| `schemas/`   | `schemas.py`        | Los datos que entran y salen por la API           | Cuando cambias qué campos recibe o devuelve  |
+| `client/`    | *(sin equivalente)* | Llamadas a otros microservicios                   | Cuando conectas con otro servicio            |
+| `config/`    | *(sin equivalente)* | Configuración de RabbitMQ                         | Casi nunca                                   |
 
 **Flujo de una petición:**
 ```
-Petición HTTP → controller → service → repository → base de datos
+Petición HTTP → routers → service → crud → base de datos
                                     ↓
                              (si necesita otro servicio)
                                   client → otro microservicio
@@ -417,3 +417,8 @@ Igual que en customer-service: captura errores y los devuelve como JSON formatea
 #### `EurekaServerApplication.java`
 La única clase del servicio. `@EnableEurekaServer` es lo que lo convierte en servidor de descubrimiento. Todos los demás servicios se registran aquí al arrancar, y se encuentran entre sí por nombre (ej. `"product-service"`) sin necesidad de IPs fijas.
 **No necesita modificaciones.**
+
+
+### CLOUDFLARE
+Cuando levantes con docker compose up, el túnel arranca solo. Para ver la URL que te asignó Cloudflare:
+docker compose logs cloudflared

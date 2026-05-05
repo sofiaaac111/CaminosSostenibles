@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   buscarProductosPorNombre,
   cambiarEstadoProducto,
@@ -20,6 +20,13 @@ export function BodegaPage() {
   const [mensaje, setMensaje] = useState('')
   const [tipoMensaje, setTipoMensaje] = useState('info')
   const [productoAEditar, setProductoAEditar] = useState(null)
+  const refFormulario = useRef(null)
+
+  useEffect(() => {
+    if (codigoEscaneado && refFormulario.current) {
+      refFormulario.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [codigoEscaneado])
 
   async function recargarProductos() {
     const data = await listarProductos()
@@ -112,13 +119,15 @@ export function BodegaPage() {
 
       <div className="rejilla-admin">
         <LectorCodigoBarras onCodigoDetectado={setCodigoEscaneado} />
-        <FormularioProducto
-          onCrearProducto={manejarCrearProducto}
-          onEditarProducto={manejarEditarProducto}
-          productoEditar={productoAEditar}
-          cargando={cargando}
-          codigoEscaneado={codigoEscaneado}
-        />
+        <div ref={refFormulario}>
+          <FormularioProducto
+            onCrearProducto={manejarCrearProducto}
+            onEditarProducto={manejarEditarProducto}
+            productoEditar={productoAEditar}
+            cargando={cargando}
+            codigoEscaneado={codigoEscaneado}
+          />
+        </div>
         <FormularioStock onRegistrarStock={manejarRegistrarStock} cargando={cargando} />
 
         <section className="panel tarjeta animar-entrada" style={{ animationDelay: '220ms' }}>

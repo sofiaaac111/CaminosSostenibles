@@ -39,7 +39,7 @@ export function LectorCodigoBarras({ onCodigoDetectado }) {
 
       await lector.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 220, height: 220 }, disableFlip: true },
+        { fps: 15, qrbox: { width: 260, height: 160 } },
         (textoDetectado) => {
           onCodigoDetectado(textoDetectado)
           setMensaje(`Codigo detectado: ${textoDetectado}`)
@@ -109,13 +109,6 @@ export function LectorCodigoBarras({ onCodigoDetectado }) {
 
       <div className="contenedor-lector-wrapper">
         <div id={ID_LECTOR} className="contenedor-lector" />
-        <div className={`guia-escaneo ${activo ? 'activa' : ''}`} aria-hidden="true">
-          <div className="guia-escaneo-marco" />
-          <div className="instrucciones-escaneo">
-            <p>Alinea el codigo dentro del cuadro</p>
-            <p>Acerca hasta que ocupe buena parte del marco</p>
-          </div>
-        </div>
       </div>
       {mensaje && <p className="mensaje-lector">{mensaje}</p>}
     </section>

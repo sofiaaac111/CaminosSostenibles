@@ -1,32 +1,5 @@
 
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  eureka-server:
-    build:
-      context: .
-      dockerfile: eureka-server/Dockerfile
-    ports:
-      - "8761:8761"
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   product-service:
     build:
       context: .
@@ -35,14 +8,6 @@ services:
       - "8081:8081"
     volumes:
       - .:/app
-    environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_RABBITMQ_HOST: rabbitmq
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
     networks:
       - app-network
 
@@ -54,52 +19,6 @@ services:
       - "8082:8082"
     volumes:
       - .:/app
-    environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_RABBITMQ_HOST: rabbitmq
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
-    networks:
-      - app-network
-
-  audit-service:
-    build:
-      context: .
-      dockerfile: audit-service/Dockerfile
-    ports:
-      - "8083:8083"
-    volumes:
-      - .:/app
-    environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_RABBITMQ_HOST: rabbitmq
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
-    networks:
-      - app-network
-
-  scanner-service:
-    build:
-      context: .
-      dockerfile: scanner-service/Dockerfile
-    ports:
-      - "8084:8084"
-    volumes:
-      - .:/app
-    environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_RABBITMQ_HOST: rabbitmq
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
     networks:
       - app-network
 
@@ -111,11 +30,6 @@ services:
       - "8085:8085"
     volumes:
       - .:/app
-    environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-    depends_on:
-      eureka-server:
-        condition: service_healthy
     networks:
       - app-network
 
@@ -128,10 +42,8 @@ services:
     volumes:
       - .:/app
     environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-    depends_on:
-      eureka-server:
-        condition: service_healthy
+      PRODUCT_SERVICE_URL: http://product-service:8081
+      INVENTORY_SERVICE_URL: http://inventory-service:8082
     networks:
       - app-network
 
@@ -143,6 +55,14 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    networks:
+      - app-network
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://frontend:5173
+    depends_on:
+      - frontend
     networks:
       - app-network
 

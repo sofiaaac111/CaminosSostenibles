@@ -6,8 +6,8 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import productservice.entity.Producto;
-import productservice.repository.ProductoRepository;
+import productservice.models.Producto;
+import productservice.crud.ProductoRepository;
 
 @Service
 public class ProductoService {

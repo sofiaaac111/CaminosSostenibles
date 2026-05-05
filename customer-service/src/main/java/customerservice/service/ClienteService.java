@@ -5,11 +5,11 @@ import java.util.Optional;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import customerservice.dto.ClienteActualizarRequest;
-import customerservice.dto.ClienteRegistroRequest;
-import customerservice.dto.LoginRequest;
-import customerservice.entity.Cliente;
-import customerservice.repository.ClienteRepository;
+import customerservice.schemas.FormularioActualizacion;
+import customerservice.schemas.FormularioRegistro;
+import customerservice.schemas.FormularioLogin;
+import customerservice.models.Cliente;
+import customerservice.crud.ClienteRepository;
 
 @Service
 public class ClienteService {
@@ -22,7 +22,7 @@ public class ClienteService {
         this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
-    public Cliente registrar(ClienteRegistroRequest request) {
+    public Cliente registrar(FormularioRegistro request) {
         if (clienteRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Ya existe una cuenta con ese correo.");
         }
@@ -39,7 +39,7 @@ public class ClienteService {
         return clienteRepository.save(cliente);
     }
 
-    public Cliente login(LoginRequest request) {
+    public Cliente login(FormularioLogin request) {
         Optional<Cliente> clienteOpcional = clienteRepository.findByEmail(request.getEmail().toLowerCase());
         if (clienteOpcional.isEmpty()) {
             throw new IllegalArgumentException("Credenciales invalidas.");
@@ -59,7 +59,7 @@ public class ClienteService {
         return clienteRepository.findById(idCliente);
     }
 
-    public Cliente actualizarPerfil(Long idCliente, ClienteActualizarRequest request) {
+    public Cliente actualizarPerfil(Long idCliente, FormularioActualizacion request) {
         Cliente cliente = clienteRepository.findById(idCliente)
                 .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado."));
 

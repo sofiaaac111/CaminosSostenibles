@@ -2,7 +2,6 @@
 // de CORS/certificados en iPhone cuando se accede por HTTPS público.
 const API_BASE_PRODUCTOS = '/api/productos'
 const API_BASE_INVENTARIO = '/api/inventario'
-const API_BASE_ESCANEO = '/api/escaneo'
 
 async function manejarRespuesta(respuesta) {
   const tipo = respuesta.headers.get('content-type') || ''
@@ -69,19 +68,6 @@ export async function consultarExistencia(idProducto) {
 
 export async function listarExistencias() {
   const respuesta = await fetch(`${API_BASE_INVENTARIO}/existencias`)
-  return manejarRespuesta(respuesta)
-}
-
-export async function comprarOnlinePorId({ idProducto, cantidad }) {
-  const params = new URLSearchParams({
-    idProducto: String(idProducto),
-    cantidad: String(cantidad),
-  })
-
-  const respuesta = await fetch(`${API_BASE_ESCANEO}/ventas/online?${params.toString()}`, {
-    method: 'POST',
-  })
-
   return manejarRespuesta(respuesta)
 }
 

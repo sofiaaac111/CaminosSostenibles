@@ -17,10 +17,6 @@ export default defineConfig({
         target: 'http://inventory-service:8082',
         changeOrigin: true,
       },
-      '/api/escaneo': {
-        target: 'http://scanner-service:8084',
-        changeOrigin: true,
-      },
       '/api/clientes': {
         target: 'http://customer-service:8085',
         changeOrigin: true,

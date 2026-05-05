@@ -28,11 +28,8 @@
     </properties>
 
     <modules>
-        <module>eureka-server</module>
         <module>product-service</module>
         <module>inventory-service</module>
-        <module>scanner-service</module>
-        <module>audit-service</module>
         <module>customer-service</module>
         <module>purchase-service</module>
     </modules>
