@@ -1,0 +1,299 @@
+let todosLosProductos = []
+let todosLosPedidos   = []
+const UMBRAL_STOCK_BAJO    = 5
+const UMBRAL_STOCK_MEDIO   = 20
+
+// ── Carga inicial ────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  if (!verificarRol('ADMIN')) return
+  await Promise.all([cargarProductos(), cargarPedidos(), cargarCategorias()])
+  verificarStockBajo()
+})
+
+async function cargarCategorias() {
+  try {
+    const categorias = await obtenerCategorias()
+    const select = document.getElementById('categoria')
+    select.innerHTML = '<option value="">Selecciona una categoría</option>'
+    categorias.forEach(cat => {
+      const op = document.createElement('option')
+      op.value = cat.nombre
+      op.textContent = cat.nombre
+      select.appendChild(op)
+    })
+  } catch {
+    // Si falla, dejar el select vacío
+  }
+}
+
+// ── PRODUCTOS ─────────────────────────────────────────────────────────────────
+
+async function cargarProductos() {
+  try {
+    todosLosProductos = await obtenerProductos()
+    renderizarTablaProductos(todosLosProductos)
+    document.getElementById('m-productos-activos').textContent =
+      todosLosProductos.filter(p => p.activo).length
+  } catch (error) {
+    mostrarNotificacion(document.getElementById('notificacion'), 'Error al cargar productos: ' + error.message, 'error')
+  }
+}
+
+function renderizarTablaProductos(productos) {
+  const cuerpo = document.getElementById('cuerpo-tabla')
+  if (!productos.length) {
+    cuerpo.innerHTML = '<tr><td colspan="6" class="placeholder">No hay productos.</td></tr>'
+    return
+  }
+  cuerpo.innerHTML = productos.map(p => `
+    <tr>
+      <td>${p.idProducto}</td>
+      <td>${p.nombreProducto}</td>
+      <td>${p.categoriaProducto}</td>
+      <td>${formatearMoneda(p.precioProducto)}</td>
+      <td>${p.activo ? '✅ Activo' : '❌ Inactivo'}</td>
+      <td style="display:flex; gap:6px;">
+        <button class="boton-secundario" onclick="cargarParaEditar(${p.idProducto})">Editar</button>
+        <button class="boton-secundario" onclick="toggleEstado(${p.idProducto}, ${p.activo})">
+          ${p.activo ? 'Desactivar' : 'Activar'}
+        </button>
+      </td>
+    </tr>
+  `).join('')
+}
+
+function filtrarProductos() {
+  const termino = document.getElementById('buscador').value.toLowerCase()
+  renderizarTablaProductos(
+    todosLosProductos.filter(p =>
+      p.nombreProducto.toLowerCase().includes(termino) ||
+      p.categoriaProducto.toLowerCase().includes(termino)
+    )
+  )
+}
+
+function cargarParaEditar(id) {
+  const p = todosLosProductos.find(p => p.idProducto === id)
+  if (!p) return
+  document.getElementById('id-producto').value   = p.idProducto
+  document.getElementById('codigo').value         = p.codigoProducto
+  document.getElementById('nombre').value         = p.nombreProducto
+  document.getElementById('categoria').value      = p.categoriaProducto
+  document.getElementById('precio').value         = p.precioProducto
+  document.getElementById('unidad').value         = p.unidadMedida || ''
+  document.getElementById('imagen').value         = p.imagenUrl || ''
+  document.getElementById('descripcion').value    = p.descripcionProducto || ''
+  document.getElementById('titulo-formulario').textContent = `Editando producto #${id}`
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function cancelarEdicion() {
+  document.getElementById('formulario-producto').reset()
+  document.getElementById('id-producto').value = ''
+  document.getElementById('titulo-formulario').textContent = 'Registrar producto'
+}
+
+async function toggleEstado(id, estadoActual) {
+  try {
+    await cambiarEstadoProducto(id, !estadoActual)
+    await cargarProductos()
+  } catch (error) {
+    mostrarNotificacion(document.getElementById('notificacion'), error.message, 'error')
+  }
+}
+
+document.getElementById('formulario-producto').addEventListener('submit', async (evento) => {
+  evento.preventDefault()
+  const notif = document.getElementById('notificacion')
+  const id    = document.getElementById('id-producto').value
+  const datos = {
+    codigoProducto:      document.getElementById('codigo').value,
+    nombreProducto:      document.getElementById('nombre').value,
+    categoriaProducto:   document.getElementById('categoria').value,
+    precioProducto:      Number(document.getElementById('precio').value),
+    unidadMedida:        document.getElementById('unidad').value,
+    imagenUrl:           document.getElementById('imagen').value,
+    descripcionProducto: document.getElementById('descripcion').value,
+  }
+  try {
+    if (id) {
+      await editarProducto(Number(id), datos)
+      mostrarNotificacion(notif, `Producto #${id} actualizado.`)
+    } else {
+      const creado = await crearProducto(datos)
+      mostrarNotificacion(notif, `Producto #${creado.idProducto} creado.`)
+    }
+    cancelarEdicion()
+    await cargarProductos()
+  } catch (error) {
+    mostrarNotificacion(notif, error.message, 'error')
+  }
+})
+
+// ── PEDIDOS ───────────────────────────────────────────────────────────────────
+
+async function cargarPedidos() {
+  try {
+    todosLosPedidos = await obtenerTodosPedidos()
+    renderizarTablaPedidos(todosLosPedidos)
+    construirDashboard()
+  } catch (error) {
+    console.error('Error al cargar pedidos:', error)
+  }
+}
+
+function renderizarTablaPedidos(pedidos) {
+  const cuerpo = document.getElementById('cuerpo-pedidos')
+  if (!pedidos.length) {
+    cuerpo.innerHTML = '<tr><td colspan="5" class="placeholder">No hay pedidos.</td></tr>'
+    return
+  }
+  cuerpo.innerHTML = pedidos.map(p => `
+    <tr>
+      <td>#${p.idPedido}</td>
+      <td>${p.idCliente}</td>
+      <td>${p.estado}</td>
+      <td>${formatearMoneda(p.total)}</td>
+      <td>${new Date(p.fechaCreacion).toLocaleDateString('es-CO')}</td>
+    </tr>
+  `).join('')
+}
+
+function filtrarPedidos() {
+  const idCliente  = document.getElementById('filtro-cliente').value.trim()
+  const desde      = document.getElementById('filtro-fecha-desde').value
+  const hasta      = document.getElementById('filtro-fecha-hasta').value
+  const estado     = document.getElementById('filtro-estado').value
+
+  const filtrados = todosLosPedidos.filter(p => {
+    const fecha = new Date(p.fechaCreacion)
+    return (
+      (!idCliente || String(p.idCliente) === idCliente) &&
+      (!desde     || fecha >= new Date(desde)) &&
+      (!hasta     || fecha <= new Date(hasta + 'T23:59:59')) &&
+      (!estado    || p.estado === estado)
+    )
+  })
+  renderizarTablaPedidos(filtrados)
+}
+
+function limpiarFiltrosPedidos() {
+  document.getElementById('filtro-cliente').value     = ''
+  document.getElementById('filtro-fecha-desde').value = ''
+  document.getElementById('filtro-fecha-hasta').value = ''
+  document.getElementById('filtro-estado').value      = ''
+  renderizarTablaPedidos(todosLosPedidos)
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+
+function construirDashboard() {
+  const hoy  = new Date()
+  const mesActual = hoy.getMonth()
+  const anioActual = hoy.getFullYear()
+
+  // Métricas numéricas
+  const pedidosHoy = todosLosPedidos.filter(p => {
+    const f = new Date(p.fechaCreacion)
+    return f.toDateString() === hoy.toDateString()
+  })
+  const ingresosMes = todosLosPedidos
+    .filter(p => {
+      const f = new Date(p.fechaCreacion)
+      return f.getMonth() === mesActual && f.getFullYear() === anioActual
+    })
+    .reduce((sum, p) => sum + Number(p.total || 0), 0)
+
+  document.getElementById('m-pedidos-hoy').textContent   = pedidosHoy.length
+  document.getElementById('m-ingresos-mes').textContent  = formatearMoneda(ingresosMes)
+  document.getElementById('m-total-pedidos').textContent = todosLosPedidos.length
+
+  // Gráfica: ventas por día (últimos 7 días)
+  const etiquetasDias = []
+  const ventasPorDia  = []
+  for (let i = 6; i >= 0; i--) {
+    const dia = new Date()
+    dia.setDate(dia.getDate() - i)
+    const etiqueta = dia.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' })
+    etiquetasDias.push(etiqueta)
+    const totalDia = todosLosPedidos
+      .filter(p => new Date(p.fechaCreacion).toDateString() === dia.toDateString())
+      .reduce((s, p) => s + Number(p.total || 0), 0)
+    ventasPorDia.push(totalDia)
+  }
+
+  new Chart(document.getElementById('grafica-ventas-dia'), {
+    type: 'bar',
+    data: {
+      labels: etiquetasDias,
+      datasets: [{
+        label: 'Ingresos (COP)',
+        data: ventasPorDia,
+        backgroundColor: '#D62828cc',
+        borderRadius: 6,
+      }],
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => `$${v.toLocaleString('es-CO')}` } } },
+    },
+  })
+
+  // Gráfica: top 5 productos más vendidos
+  const conteoProductos = {}
+  todosLosPedidos.forEach(pedido => {
+    (pedido.items || []).forEach(item => {
+      const nombre = item.nombreProducto
+      conteoProductos[nombre] = (conteoProductos[nombre] || 0) + Number(item.cantidad || 0)
+    })
+  })
+
+  const top5 = Object.entries(conteoProductos)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+
+  new Chart(document.getElementById('grafica-top-productos'), {
+    type: 'doughnut',
+    data: {
+      labels: top5.map(([nombre]) => nombre),
+      datasets: [{
+        data: top5.map(([, cantidad]) => cantidad),
+        backgroundColor: ['#D62828', '#FF9505', '#16a34a', '#2563eb', '#7c3aed'],
+      }],
+    },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+    },
+  })
+}
+
+// ── ALERTAS DE STOCK BAJO ─────────────────────────────────────────────────────
+
+async function verificarStockBajo() {
+  try {
+    const existencias = await obtenerExistencias()
+    const bajos = existencias.filter(e => Number(e.cantidadTotal) < UMBRAL_STOCK_BAJO)
+
+    if (bajos.length === 0) return
+
+    const seccion = document.getElementById('seccion-alertas')
+    const lista   = document.getElementById('lista-alertas')
+    seccion.style.display = 'block'
+
+    lista.innerHTML = bajos.map(e => {
+      const cantidad = Number(e.cantidadTotal)
+      const color    = cantidad === 0 ? '#ef4444' : '#f59e0b'
+      const texto    = cantidad === 0 ? 'AGOTADO' : `Solo ${cantidad} unidades`
+      return `
+        <div style="display:flex; justify-content:space-between; padding:8px 12px;
+                    background:${color}18; border-left:4px solid ${color};
+                    border-radius:4px; margin-bottom:6px; font-size:0.87rem;">
+          <span>Producto ID: <strong>${e.idProducto}</strong></span>
+          <span style="color:${color}; font-weight:700;">${texto}</span>
+        </div>
+      `
+    }).join('')
+  } catch {
+    // Si falla la carga de existencias, simplemente no mostrar alertas
+  }
+}

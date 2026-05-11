@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrito – Caminos Sostenibles</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+
+<nav class="cabecera">
+  <span class="cabecera-marca">Caminos Sostenibles</span>
+  <div class="cabecera-nav">
+    <a href="/catalogo.html">Catálogo</a>
+    <a href="/carrito.html" class="activo">Carrito</a>
+    <a href="/pedidos.html">Mis pedidos</a>
+    <a href="/perfil.html">Mi perfil</a>
+    <button onclick="cerrarSesion()">Salir</button>
+  </div>
+</nav>
+
+<div class="contenedor" style="max-width:700px;">
+  <div id="notificacion"></div>
+
+  <div class="tarjeta">
+    <h2 style="margin-bottom:16px;">Tu carrito</h2>
+    <div id="lista-carrito"></div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:16px; border-top:1px solid var(--borde);">
+      <strong style="font-size:1.1rem;">Total: <span id="total-carrito">$0</span></strong>
+      <div style="display:flex; gap:8px;">
+        <a href="/catalogo.html" class="boton-secundario">Seguir comprando</a>
+        <a href="/checkout.html" class="boton-principal" id="btn-pagar">Ir a pagar</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js?v=2"></script>
+<script src="/js/carrito.js?v=2"></script>
+</body>
+</html>

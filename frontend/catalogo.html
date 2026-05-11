@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo – Caminos Sostenibles</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <style>
+    .layout-catalogo {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .sidebar {
+      position: sticky;
+      top: 80px;
+    }
+    .sidebar h3 {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--texto-suave);
+      margin: 0 0 10px 0;
+    }
+    .sidebar-seccion {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--borde);
+    }
+    .sidebar-seccion:last-child { border-bottom: none; margin-bottom: 0; }
+    .btn-categoria {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 7px 10px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      color: var(--texto);
+      transition: background 0.15s;
+      margin-bottom: 2px;
+    }
+    .btn-categoria:hover { background: var(--fondo); }
+    .btn-categoria.activo { background: var(--acento); color: white; font-weight: 600; }
+    .precio-display { font-weight: 700; color: var(--acento); font-size: 0.9rem; margin-top: 6px; }
+    .barra-superior {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .barra-superior input[type="text"] {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--borde);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+    .conteo-resultados {
+      font-size: 0.82rem;
+      color: var(--texto-suave);
+      white-space: nowrap;
+    }
+    @media (max-width: 640px) {
+      .layout-catalogo { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="cabecera">
+  <span class="cabecera-marca">Caminos Sostenibles</span>
+  <div class="cabecera-nav">
+    <a href="/catalogo.html" class="activo">Catálogo</a>
+    <a href="/carrito.html">
+      Carrito <span class="badge-carrito" id="badge-carrito" style="display:none;"></span>
+    </a>
+    <a href="/pedidos.html">Mis pedidos</a>
+    <a href="/perfil.html">Mi perfil</a>
+    <button onclick="cerrarSesion()">Salir</button>
+  </div>
+</nav>
+
+<div class="contenedor">
+  <div id="notificacion"></div>
+
+  <!-- Barra de búsqueda superior -->
+  <div class="barra-superior">
+    <input type="text" id="buscador" placeholder="Buscar producto por nombre..." oninput="filtrarProductos()">
+    <span class="conteo-resultados" id="conteo"></span>
+  </div>
+
+  <div class="layout-catalogo">
+
+    <!-- Sidebar de filtros -->
+    <aside class="tarjeta sidebar">
+
+      <div class="sidebar-seccion">
+        <h3>Categorías</h3>
+        <button class="btn-categoria activo" onclick="seleccionarCategoria('', this)">Todas</button>
+        <div id="lista-categorias"></div>
+      </div>
+
+      <div class="sidebar-seccion">
+        <h3>Precio máximo</h3>
+        <input type="range" id="filtro-precio-max" min="0" max="100000" step="1000"
+               value="100000" oninput="actualizarPrecio(this)" style="width:100%; accent-color:var(--acento);">
+        <p class="precio-display" id="precio-display">Sin límite</p>
+      </div>
+
+      <div class="sidebar-seccion">
+        <h3>Disponibilidad</h3>
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.875rem; cursor:pointer;">
+          <input type="checkbox" id="solo-disponibles" onchange="filtrarProductos()"
+                 style="accent-color:var(--acento);">
+          Solo con stock disponible
+        </label>
+      </div>
+
+      <button class="boton-secundario" style="width:100%; margin-top:4px;" onclick="limpiarFiltros()">
+        Limpiar filtros
+      </button>
+    </aside>
+
+    <!-- Grilla de productos -->
+    <div id="grilla-productos" class="grilla-productos">
+      <p class="placeholder">Cargando productos...</p>
+    </div>
+
+  </div>
+</div>
+
+<script src="/js/api.js?v=2"></script>
+<script src="/js/catalogo.js?v=2"></script>
+</body>
+</html>

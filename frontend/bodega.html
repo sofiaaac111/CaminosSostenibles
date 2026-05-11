@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodega – Caminos Sostenibles</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+
+<nav class="cabecera">
+  <span class="cabecera-marca">Caminos Sostenibles</span>
+  <div class="cabecera-nav">
+    <a href="/admin.html">Administrador</a>
+    <a href="/bodega.html" class="activo">Bodega</a>
+    <a href="/catalogo.html">Tienda</a>
+  </div>
+</nav>
+
+<div class="contenedor">
+  <div id="notificacion"></div>
+
+  <!-- ── FILA 1: Scanner + Formulario de stock ──────────────────── -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+
+    <div class="tarjeta">
+      <h2>Escáner de código de barras</h2>
+      <p class="subtitulo">Escanea para identificar un producto automáticamente.</p>
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button class="boton-principal" onclick="iniciarScanner()">Activar cámara</button>
+        <button class="boton-secundario" onclick="detenerScanner()">Detener</button>
+      </div>
+      <div id="contenedor-scanner"></div>
+      <p id="resultado-scanner" style="margin-top:8px; font-size:0.85rem; color:var(--texto-suave);"></p>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Ingresar stock</h2>
+      <p class="subtitulo">Registra un lote nuevo para un producto.</p>
+      <form class="formulario" id="formulario-stock">
+        <label class="ancho-completo">
+          ID del producto
+          <input type="number" id="id-producto-stock" placeholder="Se llena al escanear o escribe el ID" required>
+        </label>
+        <label class="ancho-completo">
+          Número de lote
+          <input type="text" id="numero-lote" placeholder="Ej: LOTE-2024-001" required>
+        </label>
+        <label>
+          Cantidad
+          <input type="number" id="cantidad-stock" min="1" step="0.01" required>
+        </label>
+        <label>
+          Fecha de vencimiento
+          <input type="date" id="fecha-vencimiento" required>
+        </label>
+        <div style="grid-column:1/-1;">
+          <button type="submit" class="boton-principal">Registrar stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── SEMÁFORO DE STOCK ───────────────────────────────────────── -->
+  <div class="tarjeta">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div>
+        <h2>Semáforo de stock</h2>
+        <p class="subtitulo">
+          <span style="color:#ef4444;">● Crítico (0–5)</span> &nbsp;
+          <span style="color:#f59e0b;">● Bajo (6–20)</span> &nbsp;
+          <span style="color:#16a34a;">● Normal (&gt;20)</span>
+        </p>
+      </div>
+      <button class="boton-secundario" onclick="cargarSemaforo()">Actualizar</button>
+    </div>
+    <div class="tabla-contenedor">
+      <table>
+        <thead>
+          <tr><th>Estado</th><th>ID Producto</th><th>Stock disponible</th></tr>
+        </thead>
+        <tbody id="cuerpo-semaforo"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── LOTES POR VENCER ────────────────────────────────────────── -->
+  <div class="tarjeta">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div>
+        <h2>Lotes próximos a vencer</h2>
+        <p class="subtitulo">Muestra lotes con stock disponible que vencen antes de la fecha indicada.</p>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="date" id="fecha-limite-vencer" style="padding:6px 10px; border:1px solid var(--borde); border-radius:8px;">
+        <button class="boton-principal" onclick="cargarLotesPorVencer()">Consultar</button>
+      </div>
+    </div>
+    <div class="tabla-contenedor">
+      <table>
+        <thead>
+          <tr><th>Lote</th><th>Producto ID</th><th>Cantidad</th><th>Vence</th><th>Urgencia</th></tr>
+        </thead>
+        <tbody id="cuerpo-lotes-vencer"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── HISTORIAL DE ENTRADAS (LOTES REGISTRADOS) ──────────────── -->
+  <div class="tarjeta">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div>
+        <h2>Historial de entradas de stock</h2>
+        <p class="subtitulo">Lotes registrados por producto. Ingresa un ID para consultar.</p>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="number" id="id-producto-historial" placeholder="ID producto" style="padding:6px 10px; border:1px solid var(--borde); border-radius:8px; width:130px;">
+        <button class="boton-principal" onclick="cargarHistorialProducto()">Consultar</button>
+      </div>
+    </div>
+    <div class="tabla-contenedor">
+      <table>
+        <thead>
+          <tr><th>Número de lote</th><th>Cantidad ingresada</th><th>Fecha ingreso</th><th>Vencimiento</th><th>Stock restante</th></tr>
+        </thead>
+        <tbody id="cuerpo-historial"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="/js/api.js?v=2"></script>
+<script src="/js/bodega.js?v=2"></script>
+</body>
+</html>

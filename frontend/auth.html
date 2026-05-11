@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ingresar – Caminos Sostenibles</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body style="display:flex; align-items:center; justify-content:center; min-height:100vh;">
+
+<div style="width:100%; max-width:420px; padding:20px;">
+  <div class="tarjeta">
+    <h1 style="text-align:center; margin-bottom:4px; color:var(--acento);">Caminos Sostenibles</h1>
+    <p style="text-align:center; color:var(--texto-suave); font-size:0.85rem; margin-bottom:20px;">Market</p>
+
+    <!-- Tabs login / registro -->
+    <div style="display:flex; gap:8px; margin-bottom:20px;">
+      <button class="boton-principal" id="tab-login" onclick="mostrarLogin()" style="flex:1;">Iniciar sesión</button>
+      <button class="boton-secundario" id="tab-registro" onclick="mostrarRegistro()" style="flex:1;">Registrarme</button>
+    </div>
+
+    <div id="notificacion"></div>
+
+    <!-- Formulario login -->
+    <form class="formulario" id="form-login" onsubmit="manejarLogin(event)">
+      <label class="ancho-completo">
+        Correo electrónico
+        <input type="email" id="login-email" required>
+      </label>
+      <label class="ancho-completo">
+        Contraseña
+        <input type="password" id="login-password" required>
+      </label>
+      <div class="ancho-completo">
+        <button type="submit" class="boton-principal" style="width:100%;">Entrar</button>
+      </div>
+    </form>
+
+    <!-- Formulario registro (oculto por defecto) -->
+    <form class="formulario" id="form-registro" style="display:none;" onsubmit="manejarRegistro(event)">
+      <label>
+        Nombre completo
+        <input type="text" id="reg-nombre" required>
+      </label>
+      <label>
+        Correo electrónico
+        <input type="email" id="reg-email" required>
+      </label>
+      <label>
+        Contraseña
+        <input type="password" id="reg-password" required>
+      </label>
+      <label>
+        Ciudad
+        <input type="text" id="reg-ciudad" required>
+      </label>
+      <label>
+        Teléfono
+        <input type="tel" id="reg-telefono" required>
+      </label>
+      <label class="ancho-completo">
+        Dirección
+        <input type="text" id="reg-direccion" required>
+      </label>
+      <div class="ancho-completo">
+        <button type="submit" class="boton-principal" style="width:100%;">Crear cuenta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/api.js?v=2"></script>
+<script src="/js/auth.js?v=2"></script>
+</body>
+</html>

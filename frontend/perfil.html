@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi perfil – Caminos Sostenibles</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+
+<nav class="cabecera">
+  <span class="cabecera-marca">Caminos Sostenibles</span>
+  <div class="cabecera-nav">
+    <a href="/catalogo.html">Catálogo</a>
+    <a href="/pedidos.html">Mis pedidos</a>
+    <a href="/perfil.html" class="activo">Mi perfil</a>
+    <button onclick="cerrarSesion()">Salir</button>
+  </div>
+</nav>
+
+<div class="contenedor" style="max-width:600px;">
+  <div id="notificacion"></div>
+
+  <!-- Datos personales -->
+  <div class="tarjeta">
+    <h2>Editar perfil</h2>
+    <p class="subtitulo">Actualiza tus datos de contacto y entrega.</p>
+    <form class="formulario" onsubmit="guardarPerfil(event)">
+      <label>
+        Nombre
+        <input type="text" id="perfil-nombre" required>
+      </label>
+      <label>
+        Correo (no editable)
+        <input type="email" id="perfil-email" disabled>
+      </label>
+      <label>
+        Ciudad
+        <input type="text" id="perfil-ciudad">
+      </label>
+      <label>
+        Teléfono
+        <input type="tel" id="perfil-telefono">
+      </label>
+      <label class="ancho-completo">
+        Dirección
+        <input type="text" id="perfil-direccion">
+      </label>
+      <div class="ancho-completo">
+        <button type="submit" class="boton-principal">Guardar cambios</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Cambio de contraseña: oculto por defecto -->
+  <div class="tarjeta">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h2>Contraseña</h2>
+        <p class="subtitulo">¿Deseas cambiar tu contraseña?</p>
+      </div>
+      <button class="boton-secundario" onclick="toggleFormularioContrasena()">
+        Cambiar contraseña
+      </button>
+    </div>
+
+    <form class="formulario" id="form-contrasena" style="display:none; margin-top:16px;" onsubmit="cambiarContrasenaUsuario(event)">
+      <label class="ancho-completo">
+        Contraseña actual
+        <input type="password" id="pass-actual" required>
+      </label>
+      <label>
+        Nueva contraseña
+        <input type="password" id="pass-nueva" minlength="6" required>
+      </label>
+      <label>
+        Confirmar nueva contraseña
+        <input type="password" id="pass-confirmar" required>
+      </label>
+      <div class="ancho-completo" style="display:flex; gap:8px;">
+        <button type="submit" class="boton-principal">Actualizar contraseña</button>
+        <button type="button" class="boton-secundario" onclick="toggleFormularioContrasena()">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/api.js?v=2"></script>
+<script src="/js/perfil.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso Personal – Caminos Sostenibles</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body style="display:flex; align-items:center; justify-content:center; min-height:100vh;">
+
+<div style="width:100%; max-width:400px; padding:20px;">
+  <div class="tarjeta">
+    <h1 style="text-align:center; margin-bottom:4px; color:var(--acento);">Caminos Sostenibles</h1>
+    <p style="text-align:center; color:var(--texto-suave); font-size:0.85rem; margin-bottom:24px;">Acceso personal · Administrador / Bodeguero</p>
+
+    <div id="notificacion"></div>
+
+    <form class="formulario" id="form-login" onsubmit="manejarLogin(event)">
+      <label class="ancho-completo">
+        Correo electrónico
+        <input type="email" id="login-email" required>
+      </label>
+      <label class="ancho-completo">
+        Contraseña
+        <input type="password" id="login-password" required>
+      </label>
+      <div class="ancho-completo">
+        <button type="submit" class="boton-principal" style="width:100%;">Entrar</button>
+      </div>
+    </form>
+
+    <p style="text-align:center; margin-top:16px; font-size:0.82rem; color:var(--texto-suave);">
+      <a href="/index.html" style="color:var(--acento);">← Volver al inicio</a>
+    </p>
+  </div>
+</div>
+
+<script src="/js/api.js?v=2"></script>
+<script>
+  window.addEventListener('load', () => {
+    const sesion = obtenerSesion()
+    if (sesion) {
+      if (sesion.rol === 'ADMIN') window.location.href = '/admin.html'
+      else if (sesion.rol === 'BODEGUERO') window.location.href = '/bodega.html'
+      else window.location.href = '/catalogo.html'
+    }
+  })
+
+  async function manejarLogin(evento) {
+    evento.preventDefault()
+    const notif = document.getElementById('notificacion')
+    try {
+      const cliente = await iniciarSesion(
+        document.getElementById('login-email').value,
+        document.getElementById('login-password').value
+      )
+      guardarSesion(cliente)
+      if (cliente.rol === 'ADMIN') window.location.href = '/admin.html'
+      else if (cliente.rol === 'BODEGUERO') window.location.href = '/bodega.html'
+      else window.location.href = '/catalogo.html'
+    } catch (error) {
+      mostrarNotificacion(notif, error.message, 'error')
+    }
+  }
+</script>
+</body>
+</html>

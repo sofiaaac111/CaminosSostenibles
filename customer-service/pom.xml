@@ -12,7 +12,6 @@
 
     <artifactId>customer-service</artifactId>
     <name>Customer Service</name>
-    <description>Microservice for customer registration, login and profile management</description>
 
     <dependencies>
         <dependency>
@@ -36,13 +35,18 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
             <scope>runtime</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <sourceDirectory>src</sourceDirectory>
+        <resources>
+            <resource>
+                <directory>resources</directory>
+            </resource>
+        </resources>
+    </build>
 </project>

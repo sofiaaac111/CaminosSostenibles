@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis pedidos – Caminos Sostenibles</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+
+<nav class="cabecera">
+  <span class="cabecera-marca">Caminos Sostenibles</span>
+  <div class="cabecera-nav">
+    <a href="/catalogo.html">Catálogo</a>
+    <a href="/carrito.html">Carrito</a>
+    <a href="/pedidos.html" class="activo">Mis pedidos</a>
+    <a href="/perfil.html">Mi perfil</a>
+    <button onclick="cerrarSesion()">Salir</button>
+  </div>
+</nav>
+
+<div class="contenedor">
+  <div class="tarjeta">
+    <h2 style="margin-bottom:16px;">Historial de pedidos</h2>
+    <div id="lista-pedidos">
+      <p class="placeholder">Cargando pedidos...</p>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js?v=2"></script>
+<script src="/js/pedidos.js?v=2"></script>
+</body>
+</html>

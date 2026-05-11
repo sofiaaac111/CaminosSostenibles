@@ -16,15 +16,13 @@
     <version>1.0.0</version>
     <packaging>pom</packaging>
 
-    <name>Supermarket ERP</name>
-    <description>ERP System for Supermarket based on Microservices Architecture</description>
+    <name>Caminos Sostenibles ERP</name>
+    <description>ERP System based on Microservices Architecture</description>
 
     <properties>
         <java.version>17</java.version>
         <spring-cloud.version>2023.0.0</spring-cloud.version>
         <mysql.version>8.0.33</mysql.version>
-        <jackson.version>2.15.2</jackson.version>
-        <springdoc.version>2.3.0</springdoc.version>
     </properties>
 
     <modules>
@@ -47,16 +45,6 @@
                 <groupId>mysql</groupId>
                 <artifactId>mysql-connector-java</artifactId>
                 <version>${mysql.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springdoc</groupId>
-                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-                <version>${springdoc.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
