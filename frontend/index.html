@@ -5,18 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Caminos Sostenibles Market</title>
   <link rel="stylesheet" href="/css/estilos.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    @media (max-width: 768px) {
+      #titulo    { font-size: 3.2rem !important; }
+      #subtitulo { font-size: 1.6rem !important; margin-bottom: 32px !important; }
+    }
+    @media (max-width: 480px) {
+      #titulo    { font-size: 2.4rem !important; }
+      #subtitulo { font-size: 1.2rem !important; }
+    }
+  </style>
 </head>
-<body style="display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--fondo);">
+<body style="display:flex; align-items:center; justify-content:center; min-height:100vh;
+background-image: url('/fondo1.png');
+background-size: cover;
+background-position: center;
+background-repeat: no-repeat;">
 
-<div style="text-align:center; max-width:480px; padding:32px 20px;">
-  <h1 style="font-size:2.2rem; color:var(--acento); margin-bottom:8px;">Caminos Sostenibles</h1>
-  <p style="font-size:1.1rem; color:var(--texto-suave); margin-bottom:48px;">Market · Productos naturales y sostenibles</p>
+<div style="text-align:center; max-width:1400px; padding:32px 20px; position: relative; z-index:1;">
+  <h1 id="titulo" style="font-size:6.5rem; font-weight: 800; color:var(--acento); margin-bottom:12px; line-height: 1.1;">
+    <span style="color:var(--texto-suave);">Caminos Sostenibles</span>
+    <span style="color:var(--texto-suave);">Market</span>
+  </h1>
+
+  <p id="subtitulo" style="font-size: 3.2rem; color:var(--texto-suave); margin-bottom: 48px;">
+    Tu supermercado online de confianza
+  </p>
 
   <div style="display:flex; flex-direction:column; gap:16px; max-width:280px; margin:0 auto;">
-    <a href="/auth.html" class="boton-principal" style="text-align:center; padding:14px; font-size:1rem;">
+    <a id="btn-cliente" href="/auth.html" class="boton-principal" style="text-align:center; padding:14px; font-size:1rem;">
       Ingresar como cliente
     </a>
-    <a href="/login-admin.html" class="boton-secundario" style="text-align:center; padding:14px; font-size:1rem;">
+    <a id="btn-admin" href="/login-admin.html" class="boton-secundario" style="text-align:center; padding:14px; font-size:1rem;">
       Acceso personal
     </a>
   </div>
@@ -30,6 +51,26 @@
     else if (sesion.rol === 'BODEGUERO') window.location.href = '/bodega.html'
     else window.location.href = '/catalogo.html'
   }
+</script>
+<script>
+  const titulo = document.getElementById('titulo')
+
+  // Divide el texto en spans por letra (equivalente al "chars" del demo)
+  titulo.innerHTML = titulo.textContent.split('').map(letra =>
+    letra === ' '
+      ? '<span style="display:inline-block; width:0.4em;"> </span>'
+      : `<span style="display:inline-block;">${letra}</span>`
+  ).join('')
+
+  // Anima cada letra
+  gsap.from('#titulo span', {
+    duration:  0.6,
+    opacity:   0,
+    y:         40,
+    rotation:  -15,
+    stagger:   0.04,
+    ease:      'back.out(1.7)'
+  })
 </script>
 </body>
 </html>

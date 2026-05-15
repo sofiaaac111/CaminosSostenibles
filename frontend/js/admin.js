@@ -17,7 +17,7 @@ async function cargarCategorias() {
     select.innerHTML = '<option value="">Selecciona una categoría</option>'
     categorias.forEach(cat => {
       const op = document.createElement('option')
-      op.value = cat.nombre
+      op.value = cat.idCategoria      // FK id, no el nombre
       op.textContent = cat.nombre
       select.appendChild(op)
     })
@@ -67,7 +67,7 @@ function filtrarProductos() {
   renderizarTablaProductos(
     todosLosProductos.filter(p =>
       p.nombreProducto.toLowerCase().includes(termino) ||
-      p.categoriaProducto.toLowerCase().includes(termino)
+      (p.categoriaProducto || '').toLowerCase().includes(termino)
     )
   )
 }
@@ -78,19 +78,21 @@ function cargarParaEditar(id) {
   document.getElementById('id-producto').value   = p.idProducto
   document.getElementById('codigo').value         = p.codigoProducto
   document.getElementById('nombre').value         = p.nombreProducto
-  document.getElementById('categoria').value      = p.categoriaProducto
+  document.getElementById('categoria').value      = p.categoria?.idCategoria || ''
   document.getElementById('precio').value         = p.precioProducto
   document.getElementById('unidad').value         = p.unidadMedida || ''
   document.getElementById('imagen').value         = p.imagenUrl || ''
   document.getElementById('descripcion').value    = p.descripcionProducto || ''
   document.getElementById('titulo-formulario').textContent = `Editando producto #${id}`
+  document.getElementById('tarjeta-producto').style.display = 'block'
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function cancelarEdicion() {
   document.getElementById('formulario-producto').reset()
   document.getElementById('id-producto').value = ''
-  document.getElementById('titulo-formulario').textContent = 'Registrar producto'
+  document.getElementById('titulo-formulario').textContent = 'Editar producto'
+  document.getElementById('tarjeta-producto').style.display = 'none'
 }
 
 async function toggleEstado(id, estadoActual) {
@@ -106,23 +108,19 @@ document.getElementById('formulario-producto').addEventListener('submit', async 
   evento.preventDefault()
   const notif = document.getElementById('notificacion')
   const id    = document.getElementById('id-producto').value
+  if (!id) return
   const datos = {
     codigoProducto:      document.getElementById('codigo').value,
     nombreProducto:      document.getElementById('nombre').value,
-    categoriaProducto:   document.getElementById('categoria').value,
+    idCategoria:         Number(document.getElementById('categoria').value),
     precioProducto:      Number(document.getElementById('precio').value),
     unidadMedida:        document.getElementById('unidad').value,
     imagenUrl:           document.getElementById('imagen').value,
     descripcionProducto: document.getElementById('descripcion').value,
   }
   try {
-    if (id) {
-      await editarProducto(Number(id), datos)
-      mostrarNotificacion(notif, `Producto #${id} actualizado.`)
-    } else {
-      const creado = await crearProducto(datos)
-      mostrarNotificacion(notif, `Producto #${creado.idProducto} creado.`)
-    }
+    await editarProducto(Number(id), datos)
+    mostrarNotificacion(notif, `Producto #${id} actualizado.`)
     cancelarEdicion()
     await cargarProductos()
   } catch (error) {
@@ -271,7 +269,8 @@ function construirDashboard() {
 
 async function verificarStockBajo() {
   try {
-    const existencias = await obtenerExistencias()
+    const [existencias, productos] = await Promise.all([obtenerExistencias(), obtenerProductos()])
+    const mapaProds = new Map(productos.map(p => [Number(p.idProducto), p.nombreProducto]))
     const bajos = existencias.filter(e => Number(e.cantidadTotal) < UMBRAL_STOCK_BAJO)
 
     if (bajos.length === 0) return
@@ -282,18 +281,26 @@ async function verificarStockBajo() {
 
     lista.innerHTML = bajos.map(e => {
       const cantidad = Number(e.cantidadTotal)
+      const nombre   = mapaProds.get(Number(e.idProducto)) || `Producto #${e.idProducto}`
       const color    = cantidad === 0 ? '#ef4444' : '#f59e0b'
-      const texto    = cantidad === 0 ? 'AGOTADO' : `Solo ${cantidad} unidades`
+      const razon    = cantidad === 0
+        ? 'Stock agotado — reponer urgente'
+        : `Solo ${cantidad} unidad${cantidad !== 1 ? 'es' : ''} disponible${cantidad !== 1 ? 's' : ''} (umbral mínimo: ${UMBRAL_STOCK_BAJO})`
       return `
-        <div style="display:flex; justify-content:space-between; padding:8px 12px;
-                    background:${color}18; border-left:4px solid ${color};
-                    border-radius:4px; margin-bottom:6px; font-size:0.87rem;">
-          <span>Producto ID: <strong>${e.idProducto}</strong></span>
-          <span style="color:${color}; font-weight:700;">${texto}</span>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 14px;
+                    background:${color}12; border-left:4px solid ${color};
+                    border-radius:6px; margin-bottom:8px; font-size:0.875rem;">
+          <div>
+            <div style="font-weight:700; margin-bottom:2px;">${nombre}</div>
+            <div style="font-size:0.78rem; color:var(--texto-suave);">ID: ${e.idProducto} · ${razon}</div>
+          </div>
+          <span style="color:${color}; font-weight:700; white-space:nowrap; margin-left:12px;">
+            ${cantidad === 0 ? 'AGOTADO' : cantidad + ' uds.'}
+          </span>
         </div>
       `
     }).join('')
   } catch {
-    // Si falla la carga de existencias, simplemente no mostrar alertas
+    // Si falla la carga, no mostrar alertas
   }
 }

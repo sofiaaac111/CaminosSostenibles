@@ -72,6 +72,8 @@ services:
       - ./frontend/perfil.html:/usr/share/nginx/html/perfil.html:ro
       - ./frontend/login-admin.html:/usr/share/nginx/html/login-admin.html:ro
       - ./frontend/factura.html:/usr/share/nginx/html/factura.html:ro
+      - ./frontend/fondo1.png:/usr/share/nginx/html/fondo1.png:ro
+      - ./frontend/inicioCli.png:/usr/share/nginx/html/inicioCli.png:ro
     networks:
       - app-network
 

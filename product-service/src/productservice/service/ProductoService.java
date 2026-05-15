@@ -6,14 +6,19 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import productservice.models.Producto;
+import productservice.crud.CategoriaRepository;
 import productservice.crud.ProductoRepository;
+import productservice.models.Categoria;
+import productservice.models.Producto;
 
 @Service
 public class ProductoService {
 
     @Autowired
     private ProductoRepository productoRepository;
+
+    @Autowired
+    private CategoriaRepository categoriaRepository;
 
     public List<Producto> obtenerTodosLosProductos() {
         return productoRepository.findAll();
@@ -32,6 +37,7 @@ public class ProductoService {
     }
 
     public Producto crearProducto(Producto producto) {
+        resolverCategoria(producto);
         if (producto.getActivo() == null) {
             producto.setActivo(false);
         }
@@ -45,12 +51,16 @@ public class ProductoService {
             producto.setCodigoProducto(datosProducto.getCodigoProducto());
             producto.setNombreProducto(datosProducto.getNombreProducto());
             producto.setDescripcionProducto(datosProducto.getDescripcionProducto());
-            producto.setCategoriaProducto(datosProducto.getCategoriaProducto());
             producto.setPrecioProducto(datosProducto.getPrecioProducto());
             producto.setUnidadMedida(datosProducto.getUnidadMedida());
             producto.setImagenUrl(datosProducto.getImagenUrl());
             if (datosProducto.getActivo() != null) {
                 producto.setActivo(datosProducto.getActivo());
+            }
+            // Actualizar categoría si viene en la petición
+            if (datosProducto.getIdCategoria() != null) {
+                resolverCategoria(datosProducto);
+                producto.setCategoria(datosProducto.getCategoria());
             }
             return productoRepository.save(producto);
         }
@@ -69,5 +79,15 @@ public class ProductoService {
 
     public void eliminarProducto(Long id) {
         productoRepository.deleteById(id);
+    }
+
+    // Resuelve el idCategoria transitorio al objeto Categoria real
+    private void resolverCategoria(Producto producto) {
+        if (producto.getIdCategoria() != null) {
+            Categoria cat = categoriaRepository.findById(producto.getIdCategoria())
+                .orElseThrow(() -> new IllegalArgumentException(
+                    "Categoría no encontrada con id: " + producto.getIdCategoria()));
+            producto.setCategoria(cat);
+        }
     }
 }

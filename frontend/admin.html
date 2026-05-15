@@ -46,7 +46,7 @@
     </div>
 
     <!-- Gráficas -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+    <div class="grid-2">
       <div>
         <h3 style="font-size:0.9rem; margin-bottom:8px;">Ventas por día (últimos 7 días)</h3>
         <canvas id="grafica-ventas-dia"></canvas>
@@ -64,16 +64,16 @@
     <div id="lista-alertas"></div>
   </div>
 
-  <!-- ── FORMULARIO PRODUCTO ────────────────────────────────────────── -->
-  <div class="tarjeta">
-    <h2 id="titulo-formulario">Registrar producto</h2>
-    <p class="subtitulo">Llena los campos y guarda el producto en el catálogo.</p>
+  <!-- ── FORMULARIO EDITAR PRODUCTO (solo visible al pulsar Editar) ── -->
+  <div class="tarjeta" id="tarjeta-producto" style="display:none; border-left:4px solid var(--rojo);">
+    <h2 id="titulo-formulario">Editar producto</h2>
+    <p class="subtitulo">Para registrar productos nuevos ve a la pestaña <strong>Bodega</strong>.</p>
 
     <form class="formulario" id="formulario-producto">
       <input type="hidden" id="id-producto">
       <label>
         Código de barras
-        <input type="text" id="codigo" inputmode="numeric" pattern="[0-9]{8,14}" placeholder="Ej: 7700000001" required>
+        <input type="text" id="codigo" inputmode="numeric" placeholder="Ej: 7700000001">
       </label>
       <label>
         Nombre del producto
@@ -101,8 +101,8 @@
         Descripción
         <textarea id="descripcion" rows="2" style="padding:8px 12px;border:1px solid var(--borde);border-radius:8px;font-family:inherit;resize:vertical;"></textarea>
       </label>
-      <div style="display:flex; gap:8px; grid-column:1/-1;">
-        <button type="submit" class="boton-principal">Guardar producto</button>
+      <div style="display:flex; gap:8px; grid-column:1/-1; flex-wrap:wrap;">
+        <button type="submit" class="boton-principal">Guardar cambios</button>
         <button type="button" class="boton-secundario" onclick="cancelarEdicion()">Cancelar</button>
       </div>
     </form>
@@ -169,7 +169,7 @@
 .metrica-valor { font-size: 1.5rem; font-weight: 700; color: var(--acento); }
 </style>
 
-<script src="/js/api.js?v=2"></script>
-<script src="/js/admin.js?v=2"></script>
+<script src="/js/api.js?v=3"></script>
+<script src="/js/admin.js?v=3"></script>
 </body>
 </html>

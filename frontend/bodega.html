@@ -22,7 +22,7 @@
   <div id="notificacion"></div>
 
   <!-- ── FILA 1: Scanner + Formulario de stock ──────────────────── -->
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+  <div class="grid-2">
 
     <div class="tarjeta">
       <h2>Escáner de código de barras</h2>
@@ -62,6 +62,48 @@
     </div>
   </div>
 
+  <!-- ── REGISTRO DE NUEVO PRODUCTO ───────────────────────────────── -->
+  <div class="tarjeta" id="tarjeta-registro-producto" style="border-left:4px solid var(--naranja);">
+    <h2 style="color:var(--naranja);">Registrar nuevo producto</h2>
+    <p class="subtitulo">Completa los datos para agregar un producto al catálogo. Al escanear un código no registrado, los campos se precargan automáticamente.</p>
+    <form class="formulario" id="formulario-nuevo-producto" onsubmit="registrarNuevoProducto(event)">
+      <label>
+        Código de barras
+        <input type="text" id="nuevo-codigo" readonly style="font-weight:600; background:var(--fondo);">
+      </label>
+      <label>
+        Nombre del producto
+        <input type="text" id="nuevo-nombre" required placeholder="Ej: Arroz Diana 1kg">
+      </label>
+      <label>
+        Categoría
+        <select id="nuevo-categoria" required style="padding:8px 12px; border:1.5px solid var(--borde); border-radius:8px; font-family:inherit; background:white;">
+          <option value="">Selecciona una categoría</option>
+        </select>
+      </label>
+      <label>
+        Precio (COP)
+        <input type="number" id="nuevo-precio" min="1" step="0.01" required>
+      </label>
+      <label>
+        Unidad de medida
+        <input type="text" id="nuevo-unidad" placeholder="Ej: kg, litro, unidad">
+      </label>
+      <label>
+        URL de imagen (opcional)
+        <input type="url" id="nuevo-imagen" placeholder="https://...">
+      </label>
+      <label class="ancho-completo">
+        Descripción (opcional)
+        <textarea id="nuevo-descripcion" rows="2" style="padding:8px 12px;border:1.5px solid var(--borde);border-radius:8px;font-family:inherit;resize:vertical;"></textarea>
+      </label>
+      <div style="grid-column:1/-1; display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="submit" class="boton-principal">Registrar producto y continuar</button>
+        <button type="button" class="boton-secundario" onclick="ocultarFormularioRegistro()">Cancelar</button>
+      </div>
+    </form>
+  </div>
+
   <!-- ── SEMÁFORO DE STOCK ───────────────────────────────────────── -->
   <div class="tarjeta">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -78,7 +120,7 @@
     <div class="tabla-contenedor">
       <table>
         <thead>
-          <tr><th>Estado</th><th>ID Producto</th><th>Stock disponible</th></tr>
+          <tr><th>Estado</th><th>Producto</th><th>Stock disponible</th></tr>
         </thead>
         <tbody id="cuerpo-semaforo"></tbody>
       </table>
@@ -100,7 +142,7 @@
     <div class="tabla-contenedor">
       <table>
         <thead>
-          <tr><th>Lote</th><th>Producto ID</th><th>Cantidad</th><th>Vence</th><th>Urgencia</th></tr>
+          <tr><th>Lote</th><th>Producto</th><th>Cantidad</th><th>Vence</th><th>Urgencia</th></tr>
         </thead>
         <tbody id="cuerpo-lotes-vencer"></tbody>
       </table>
@@ -111,7 +153,7 @@
   <div class="tarjeta">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
       <div>
-        <h2>Historial de entradas de stock</h2>
+        <h2 id="titulo-historial">Historial de entradas de stock</h2>
         <p class="subtitulo">Lotes registrados por producto. Ingresa un ID para consultar.</p>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
@@ -131,7 +173,7 @@
 
 </div>
 
-<script src="/js/api.js?v=2"></script>
-<script src="/js/bodega.js?v=2"></script>
+<script src="/js/api.js?v=3"></script>
+<script src="/js/bodega.js?v=3"></script>
 </body>
 </html>

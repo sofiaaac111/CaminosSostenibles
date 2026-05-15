@@ -5,71 +5,98 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ingresar – Caminos Sostenibles</title>
   <link rel="stylesheet" href="/css/estilos.css">
+  <style>
+    @media (max-width: 640px) {
+      body { flex-direction: column !important; }
+      .auth-branding { padding: 28px 20px 16px !important; }
+      .auth-branding .marca-titulo { font-size: 2.8rem !important; letter-spacing: -1px !important; }
+      .auth-branding .marca-subtitulo { font-size: 1.1rem !important; }
+      .auth-branding .marca-slogan { display: none; }
+      .auth-form-col { align-items: flex-start !important; padding: 0 16px 32px !important; }
+    }
+  </style>
 </head>
-<body style="display:flex; align-items:center; justify-content:center; min-height:100vh;">
 
-<div style="width:100%; max-width:420px; padding:20px;">
-  <div class="tarjeta">
-    <h1 style="text-align:center; margin-bottom:4px; color:var(--acento);">Caminos Sostenibles</h1>
-    <p style="text-align:center; color:var(--texto-suave); font-size:0.85rem; margin-bottom:20px;">Market</p>
+<body style="display:flex; min-height:100vh;
+background-image: url('/inicioCli.png');
+background-size: cover;
+background-position: center;
+background-repeat: no-repeat;">
 
-    <!-- Tabs login / registro -->
-    <div style="display:flex; gap:8px; margin-bottom:20px;">
-      <button class="boton-principal" id="tab-login" onclick="mostrarLogin()" style="flex:1;">Iniciar sesión</button>
-      <button class="boton-secundario" id="tab-registro" onclick="mostrarRegistro()" style="flex:1;">Registrarme</button>
+  <!-- Columna izquierda: branding -->
+  <div class="auth-branding" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px; text-align:center;">
+    <div class="marca-titulo" style="font-size:4.5rem; font-weight:900; color:#D62828; line-height:1; text-shadow:0 2px 20px rgba(0,0,0,0.2); letter-spacing:-2px;">
+      Caminos<br>Sostenibles
     </div>
-
-    <div id="notificacion"></div>
-
-    <!-- Formulario login -->
-    <form class="formulario" id="form-login" onsubmit="manejarLogin(event)">
-      <label class="ancho-completo">
-        Correo electrónico
-        <input type="email" id="login-email" required>
-      </label>
-      <label class="ancho-completo">
-        Contraseña
-        <input type="password" id="login-password" required>
-      </label>
-      <div class="ancho-completo">
-        <button type="submit" class="boton-principal" style="width:100%;">Entrar</button>
-      </div>
-    </form>
-
-    <!-- Formulario registro (oculto por defecto) -->
-    <form class="formulario" id="form-registro" style="display:none;" onsubmit="manejarRegistro(event)">
-      <label>
-        Nombre completo
-        <input type="text" id="reg-nombre" required>
-      </label>
-      <label>
-        Correo electrónico
-        <input type="email" id="reg-email" required>
-      </label>
-      <label>
-        Contraseña
-        <input type="password" id="reg-password" required>
-      </label>
-      <label>
-        Ciudad
-        <input type="text" id="reg-ciudad" required>
-      </label>
-      <label>
-        Teléfono
-        <input type="tel" id="reg-telefono" required>
-      </label>
-      <label class="ancho-completo">
-        Dirección
-        <input type="text" id="reg-direccion" required>
-      </label>
-      <div class="ancho-completo">
-        <button type="submit" class="boton-principal" style="width:100%;">Crear cuenta</button>
-      </div>
-    </form>
+    <div class="marca-subtitulo" style="font-size:1.8rem; font-weight:300; color:#D62828; letter-spacing:0.3em; margin-top:12px;">
+      MARKET
+    </div>
+    <div style="width:60px; height:3px; background:#D62828; border-radius:2px; margin:24px auto;"></div>
+    <div class="marca-slogan" style="font-size:1rem; color:#D62828; max-width:280px; line-height:1.6;">
+      Tu supermercado digital de confianza
+    </div>
   </div>
-</div>
 
-<script src="/js/api.js?v=2"></script>
-<script src="/js/auth.js?v=2"></script>
+    <!-- Columna derecha: formulario -->
+  <div class="auth-form-col" style="flex:1; display:flex; align-items:center; justify-content:center; padding:20px;">
+    <div style="width:100%; max-width:420px;">
+      <div class="tarjeta">
+        <h1 style="text-align:center; margin-bottom:4px; color:var(--acento);">Caminos Sostenibles</h1>
+        <h1 style="text-align:center; margin-bottom:16px; color:var(--acento);">Market</h1>
+
+        <div id="notificacion"></div>
+
+        <form class="formulario" id="form-login" onsubmit="manejarLogin(event)">
+          <label class="ancho-completo">
+            Correo electrónico
+            <input type="email" id="login-email" required>
+          </label>
+          <label class="ancho-completo">
+            Contraseña
+            <input type="password" id="login-password" required>
+          </label>
+          <div class="ancho-completo" style="display:flex; gap:8px; justify-content:center; grid-column:1/-1;">
+            <button type="submit" class="boton-principal" style="width:140px; text-transform:none !important;">Entrar</button>
+            <button type="button" class="boton-secundario" style="width:140px;" onclick="mostrarRegistro()">Registrarme</button>
+          </div>
+        </form>
+
+        <form class="formulario" id="form-registro" style="display:none;" onsubmit="manejarRegistro(event)">
+          <label>
+            Nombre completo
+            <input type="text" id="reg-nombre" required>
+          </label>
+          <label>
+            Correo electrónico
+            <input type="email" id="reg-email" required>
+          </label>
+          <label>
+            Contraseña
+            <input type="password" id="reg-password" required>
+          </label>
+          <label>
+            Ciudad
+            <input type="text" id="reg-ciudad" required>
+          </label>
+          <label>
+            Teléfono
+            <input type="tel" id="reg-telefono" required>
+          </label>
+          <label class="ancho-completo">
+            Dirección
+            <input type="text" id="reg-direccion" required>
+          </label>
+          <div class="ancho-completo" style="display:flex; gap:8px; justify-content:center; grid-column:1/-1;">
+            <button type="button" class="boton-secundario" style="width:140px;" onclick="mostrarLogin()">Volver</button>
+            <button type="submit" class="boton-principal" style="width:140px; text-transform:none !important;">Crear cuenta</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js?v=2"></script>
+  <script src="/js/auth.js?v=2"></script>
+
 </body>
 </html>

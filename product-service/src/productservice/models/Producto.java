@@ -2,13 +2,19 @@ package productservice.models;
 
 import java.math.BigDecimal;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -37,10 +43,14 @@ public class Producto {
     @Column(name = "descripcion_producto")
     private String descripcionProducto;
 
-    @NotBlank
-    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$", message = "La categoria debe contener solo letras y espacios")
-    @Column(name = "categoria_producto")
-    private String categoriaProducto;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_categoria")
+    @JsonIgnoreProperties("productos")
+    private Categoria categoria;
+
+    // Campo transitorio: recibe el idCategoria del frontend al crear/editar
+    @Transient
+    private Long idCategoria;
 
     @NotNull
     @Positive
@@ -60,17 +70,7 @@ public class Producto {
 
     public Producto() {}
 
-    public Producto(String codigoProducto, String nombreProducto, String descripcionProducto,
-                    String categoriaProducto, BigDecimal precioProducto, String unidadMedida,
-                    String imagenUrl) {
-        this.codigoProducto = codigoProducto;
-        this.nombreProducto = nombreProducto;
-        this.descripcionProducto = descripcionProducto;
-        this.categoriaProducto = categoriaProducto;
-        this.precioProducto = precioProducto;
-        this.unidadMedida = unidadMedida;
-        this.imagenUrl = imagenUrl;
-    }
+    // ── Getters y setters ─────────────────────────────────────
 
     public Long getIdProducto() { return idProducto; }
     public void setIdProducto(Long idProducto) { this.idProducto = idProducto; }
@@ -84,8 +84,16 @@ public class Producto {
     public String getDescripcionProducto() { return descripcionProducto; }
     public void setDescripcionProducto(String descripcionProducto) { this.descripcionProducto = descripcionProducto; }
 
-    public String getCategoriaProducto() { return categoriaProducto; }
-    public void setCategoriaProducto(String categoriaProducto) { this.categoriaProducto = categoriaProducto; }
+    public Categoria getCategoria() { return categoria; }
+    public void setCategoria(Categoria categoria) { this.categoria = categoria; }
+
+    // Compatibilidad frontend: devuelve el nombre de la categoría como string
+    public String getCategoriaProducto() {
+        return categoria != null ? categoria.getNombre() : null;
+    }
+
+    public Long getIdCategoria() { return idCategoria; }
+    public void setIdCategoria(Long idCategoria) { this.idCategoria = idCategoria; }
 
     public BigDecimal getPrecioProducto() { return precioProducto; }
     public void setPrecioProducto(BigDecimal precioProducto) { this.precioProducto = precioProducto; }

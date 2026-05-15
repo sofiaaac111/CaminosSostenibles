@@ -11,34 +11,76 @@ Sistema ERP de gestión para un supermercado en línea, basado en microservicios
 
 ---
 
-## Levantar el proyecto
+## Arquitectura distribuida
 
-```bash
-docker compose up --build
+El proyecto corre dividido entre dos máquinas físicas con sistemas operativos distintos:
+
+| Máquina | Sistema operativo | Servicios |
+|---|---|---|
+| Mac (anfitrión) | macOS | frontend · customer-service · purchase-service |
+| VM Ubuntu (Lima) | Ubuntu 22.04 | product-service · inventory-service |
+| Railway (cloud) | Linux | 4 bases de datos MySQL |
+
+> Ver [ARRANQUE.md](ARRANQUE.md) para el paso a paso detallado de cómo encender cada máquina.
+
+---
+
+## Cómo fluye una petición
+
+```
+Navegador
+    │
+    ▼
+nginx  (Docker · Mac · :3000)
+    ├── /api/clientes   ──► customer-service  (Docker · Mac · :8085)
+    ├── /api/pedidos    ──► purchase-service  (Docker · Mac · :8086)
+    ├── /api/productos  ──► host.docker.internal:8081 → Lima → product-service   (Ubuntu · :8081)
+    └── /api/inventario ──► host.docker.internal:8082 → Lima → inventory-service (Ubuntu · :8082)
 ```
 
-Para ver el link HTTPS generado por Cloudflare (necesario para acceder desde el celular):
+---
+
+## Arranque rápido
+
+### 1 — Primero en Ubuntu (Lima)
+
+```bash
+limactl start ubuntu-cs
+limactl shell ubuntu-cs
+sudo service docker start
+cd CaminosSostenibles
+docker-compose up product-service inventory-service
+```
+
+### 2 — Luego en el Mac
+
+```bash
+docker compose up frontend customer-service purchase-service
+```
+
+### 3 — Abrir la app
+
+```
+http://localhost:3000
+```
+
+Para ver el link HTTPS (acceso desde celular):
 
 ```bash
 docker compose logs cloudflared
 ```
 
-Busca la línea que dice:
-```
-Your quick Tunnel has been created! Visit it at: https://xxxx.trycloudflare.com
-```
-
 ---
 
-## Puertos y URLs
+## Puertos
 
-| Servicio           | Puerto | URL local                            | Descripción                     |
-|--------------------|--------|--------------------------------------|---------------------------------|
-| **Frontend**       | 3000   | http://localhost:3000                | Interfaz web (nginx)            |
-| product-service    | 8081   | http://localhost:8081/api/productos  | CRUD de productos y categorías  |
-| inventory-service  | 8082   | http://localhost:8082/api/inventario | Stock, lotes, reservas          |
-| customer-service   | 8085   | http://localhost:8085/api/clientes   | Registro, login, perfil, roles  |
-| purchase-service   | 8086   | http://localhost:8086/api/pedidos    | Checkout e historial de pedidos |
+| Servicio           | Puerto | Máquina  | Descripción                     |
+|--------------------|--------|----------|---------------------------------|
+| **Frontend**       | 3000   | Mac      | Interfaz web (nginx)            |
+| product-service    | 8081   | Ubuntu   | CRUD de productos y categorías  |
+| inventory-service  | 8082   | Ubuntu   | Stock, lotes, reservas          |
+| customer-service   | 8085   | Mac      | Registro, login, perfil, roles  |
+| purchase-service   | 8086   | Mac      | Checkout e historial de pedidos |
 
 ---
 

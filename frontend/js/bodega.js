@@ -1,11 +1,25 @@
 const UMBRAL_CRITICO = 5
 const UMBRAL_BAJO    = 20
 
-let scanner = null
+let scanner        = null
+let mapaProductos  = new Map()   // idProducto → nombreProducto
 
 // ── Carga inicial ─────────────────────────────────────────────────────────────
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
   if (!verificarRol('ADMIN', 'BODEGUERO')) return
+
+  // Cargar nombres de productos y categorías
+  try {
+    const [productos, categorias] = await Promise.all([obtenerProductos(), obtenerCategorias()])
+    mapaProductos = new Map(productos.map(p => [Number(p.idProducto), p.nombreProducto]))
+    const select = document.getElementById('nuevo-categoria')
+    categorias.forEach(cat => {
+      const op = document.createElement('option')
+      op.value = cat.idCategoria
+      op.textContent = cat.nombre
+      select.appendChild(op)
+    })
+  } catch {}
 
   const treintaDias = new Date()
   treintaDias.setDate(treintaDias.getDate() + 30)
@@ -13,6 +27,11 @@ window.addEventListener('load', () => {
 
   cargarSemaforo()
 })
+
+// ── Nombre de producto por ID ─────────────────────────────────────────────────
+function nombreProducto(id) {
+  return mapaProductos.get(Number(id)) || `Producto #${id}`
+}
 
 // ── Scanner de código de barras ───────────────────────────────────────────────
 
@@ -32,6 +51,7 @@ function iniciarScanner() {
   ).catch(error => {
     document.getElementById('resultado-scanner').textContent =
       'No se pudo acceder a la cámara: ' + error
+    scanner = null
   })
 }
 
@@ -45,10 +65,61 @@ async function buscarProductoPorCodigo(codigo) {
     const producto = await obtenerProductoPorCodigo(codigo)
     document.getElementById('id-producto-stock').value = producto.idProducto
     document.getElementById('resultado-scanner').textContent =
-      `✓ Producto: ${producto.nombreProducto} (ID: ${producto.idProducto})`
+      `✓ Producto encontrado: ${producto.nombreProducto} (ID: ${producto.idProducto})`
+    ocultarFormularioRegistro()
   } catch {
+    // Producto no existe → mostrar formulario de registro
     document.getElementById('resultado-scanner').textContent =
-      `No se encontró producto con código ${codigo}`
+      `Código ${codigo} no registrado. Completa el formulario para agregarlo al sistema.`
+    mostrarFormularioRegistro(codigo)
+  }
+}
+
+// ── Registro de nuevo producto desde bodega ───────────────────────────────────
+
+function mostrarFormularioRegistro(codigo) {
+  document.getElementById('nuevo-codigo').value = codigo
+  document.getElementById('tarjeta-registro-producto')
+    .scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function ocultarFormularioRegistro() {
+  document.getElementById('formulario-nuevo-producto').reset()
+}
+
+async function registrarNuevoProducto(evento) {
+  evento.preventDefault()
+  const notif = document.getElementById('notificacion')
+  const boton = evento.submitter
+  boton.disabled = true
+  boton.textContent = 'Registrando...'
+
+  try {
+    const datos = {
+      codigoProducto:      document.getElementById('nuevo-codigo').value,
+      nombreProducto:      document.getElementById('nuevo-nombre').value,
+      idCategoria:         Number(document.getElementById('nuevo-categoria').value),
+      precioProducto:      Number(document.getElementById('nuevo-precio').value),
+      unidadMedida:        document.getElementById('nuevo-unidad').value,
+      imagenUrl:           document.getElementById('nuevo-imagen').value,
+      descripcionProducto: document.getElementById('nuevo-descripcion').value,
+    }
+    const producto = await crearProducto(datos)
+
+    // Actualizar mapa local de nombres
+    mapaProductos.set(Number(producto.idProducto), producto.nombreProducto)
+
+    // Prellenar formulario de stock con el nuevo producto
+    document.getElementById('id-producto-stock').value = producto.idProducto
+    document.getElementById('resultado-scanner').textContent =
+      `✓ Producto registrado: ${producto.nombreProducto} (ID: ${producto.idProducto}). Ahora ingresa el lote de stock.`
+
+    mostrarNotificacion(notif, `Producto "${producto.nombreProducto}" registrado correctamente. Completa el stock a continuación.`)
+    ocultarFormularioRegistro()
+  } catch (error) {
+    mostrarNotificacion(notif, error.message, 'error')
+    boton.disabled = false
+    boton.textContent = 'Registrar producto y continuar'
   }
 }
 
@@ -84,11 +155,11 @@ async function cargarSemaforo() {
       return
     }
 
-    // Ordenar: primero los críticos, luego bajos, luego normales
     const ordenados = [...existencias].sort((a, b) => Number(a.cantidadTotal) - Number(b.cantidadTotal))
 
     cuerpo.innerHTML = ordenados.map(e => {
       const cantidad = Number(e.cantidadTotal)
+      const nombre   = nombreProducto(e.idProducto)
       let color, icono, etiqueta
       if (cantidad <= UMBRAL_CRITICO) {
         color = '#ef4444'; icono = '🔴'; etiqueta = cantidad === 0 ? 'AGOTADO' : 'CRÍTICO'
@@ -100,7 +171,10 @@ async function cargarSemaforo() {
       return `
         <tr>
           <td><span style="color:${color}; font-weight:600;">${icono} ${etiqueta}</span></td>
-          <td>${e.idProducto}</td>
+          <td>
+            <div style="font-weight:600;">${nombre}</div>
+            <div style="font-size:0.78rem; color:var(--texto-suave);">ID: ${e.idProducto}</div>
+          </td>
           <td style="font-weight:600; color:${color};">${cantidad}</td>
         </tr>
       `
@@ -125,21 +199,24 @@ async function cargarLotesPorVencer() {
       return
     }
 
-    const hoy    = new Date()
-    const limite = new Date(fechaLimite)
+    const hoy = new Date()
 
     cuerpo.innerHTML = lotes.map(lote => {
-      const fechaVence = new Date(lote.fechaVencimiento)
+      const fechaVence    = new Date(lote.fechaVencimiento)
       const diasRestantes = Math.ceil((fechaVence - hoy) / (1000 * 60 * 60 * 24))
+      const nombre        = nombreProducto(lote.idProducto)
       let urgencia, color
-      if (diasRestantes <= 7)  { urgencia = `🔴 ${diasRestantes} días`; color = '#ef4444' }
+      if (diasRestantes <= 7)       { urgencia = `🔴 ${diasRestantes} días`; color = '#ef4444' }
       else if (diasRestantes <= 15) { urgencia = `🟡 ${diasRestantes} días`; color = '#f59e0b' }
-      else                     { urgencia = `🟢 ${diasRestantes} días`; color = '#16a34a' }
+      else                          { urgencia = `🟢 ${diasRestantes} días`; color = '#16a34a' }
 
       return `
         <tr>
           <td>${lote.numeroLote}</td>
-          <td>${lote.idProducto}</td>
+          <td>
+            <div style="font-weight:600;">${nombre}</div>
+            <div style="font-size:0.78rem; color:var(--texto-suave);">ID: ${lote.idProducto}</div>
+          </td>
           <td>${lote.cantidadLote}</td>
           <td>${fechaVence.toLocaleDateString('es-CO')}</td>
           <td style="color:${color}; font-weight:600;">${urgencia}</td>
@@ -157,7 +234,11 @@ async function cargarHistorialProducto() {
   const idProducto = document.getElementById('id-producto-historial').value
   if (!idProducto) { alert('Ingresa el ID del producto.'); return }
 
-  const cuerpo = document.getElementById('cuerpo-historial')
+  const cuerpo   = document.getElementById('cuerpo-historial')
+  const titulo   = document.getElementById('titulo-historial')
+  const nombre   = nombreProducto(idProducto)
+  if (titulo) titulo.textContent = `Historial: ${nombre} (ID ${idProducto})`
+
   try {
     const lotes = await obtenerLotesProducto(idProducto)
     if (!lotes.length) {
