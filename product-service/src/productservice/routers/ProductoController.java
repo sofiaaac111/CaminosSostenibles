@@ -20,8 +20,6 @@ import productservice.models.Producto;
 import productservice.service.CategoriaService;
 import productservice.service.ProductoService;
 
-import jakarta.validation.Valid;
-
 @RestController
 @RequestMapping("/api/productos")
 @CrossOrigin(origins = "*")
@@ -63,13 +61,13 @@ public class ProductoController {
     }
 
     @PostMapping
-    public Producto crearProducto(@Valid @RequestBody Producto producto) {
+    public Producto crearProducto(@RequestBody Producto producto) {
         return productoService.crearProducto(producto);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Producto> actualizarProducto(@PathVariable Long id,
-                                                       @Valid @RequestBody Producto datosProducto) {
+                                                       @RequestBody Producto datosProducto) {
         Producto actualizado = productoService.actualizarProducto(id, datosProducto);
         if (actualizado != null) {
             return ResponseEntity.ok(actualizado);

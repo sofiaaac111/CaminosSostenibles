@@ -15,11 +15,6 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "productos")
@@ -30,13 +25,9 @@ public class Producto {
     @Column(name = "id_producto")
     private Long idProducto;
 
-    @NotBlank
-    @Pattern(regexp = "^\\d{8,14}$", message = "El codigo de barras debe contener solo numeros (8 a 14 digitos)")
     @Column(name = "codigo_producto", unique = true)
     private String codigoProducto;
 
-    @NotBlank
-    @Size(min = 2, max = 120)
     @Column(name = "nombre_producto")
     private String nombreProducto;
 
@@ -48,12 +39,9 @@ public class Producto {
     @JsonIgnoreProperties("productos")
     private Categoria categoria;
 
-    // Campo transitorio: recibe el idCategoria del frontend al crear/editar
     @Transient
     private Long idCategoria;
 
-    @NotNull
-    @Positive
     @Column(name = "precio_producto")
     private BigDecimal precioProducto;
 
@@ -64,7 +52,6 @@ public class Producto {
     @Column(name = "imagen_url", columnDefinition = "LONGTEXT")
     private String imagenUrl;
 
-    @NotNull
     @Column(name = "activo", nullable = false)
     private Boolean activo = false;
 
@@ -87,7 +74,6 @@ public class Producto {
     public Categoria getCategoria() { return categoria; }
     public void setCategoria(Categoria categoria) { this.categoria = categoria; }
 
-    // Compatibilidad frontend: devuelve el nombre de la categoría como string
     public String getCategoriaProducto() {
         return categoria != null ? categoria.getNombre() : null;
     }
