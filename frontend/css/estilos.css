@@ -268,13 +268,13 @@ a:hover { color: var(--rojo-hover); }
   width: 100%;
   height: 180px;
   object-fit: contain;
-  background: var(--fondo);
+  background: #ffffff;
   padding: 16px;
 }
 
 .producto-tarjeta .sin-imagen {
   height: 180px;
-  background: var(--fondo);
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1,10 +1,25 @@
 let todosLosProductos = []
 let categoriaActiva   = ''
 let precioMaxActivo   = Infinity
+let esAdmin           = false
 
 window.addEventListener('load', async () => {
-  verificarSesion()
-  actualizarBadgeCarrito()
+  const sesion = obtenerSesion()
+  esAdmin = !!(sesion && (sesion.rol === 'ADMIN' || sesion.rol === 'BODEGUERO'))
+
+  if (esAdmin) {
+    document.querySelectorAll('.nav-cliente').forEach(el => el.style.display = 'none')
+    const navAdmin = document.getElementById('nav-admin')
+    if (navAdmin) navAdmin.style.display = 'flex'
+    const banner = document.getElementById('banner-admin')
+    if (banner) banner.style.display = 'block'
+    const filtroDisp = document.getElementById('sidebar-disponibilidad')
+    if (filtroDisp) filtroDisp.style.display = 'none'
+  } else {
+    verificarSesion()
+    actualizarBadgeCarrito()
+  }
+
   await Promise.all([cargarCatalogo(), cargarCategoriasEnSidebar()])
 })
 
@@ -15,10 +30,12 @@ async function cargarCatalogo() {
       obtenerExistencias(),
     ])
     const mapaStock = new Map(existencias.map(e => [e.idProducto, Number(e.cantidadTotal)]))
-    todosLosProductos = productos.map(p => ({
+    // Admin ve todos los productos; cliente solo ve los activos
+    const base = esAdmin ? productos : productos.filter(p => p.activo)
+    todosLosProductos = base.map(p => ({
       ...p,
       cantidadDisponible: mapaStock.get(p.idProducto) || 0,
-      agotado: (mapaStock.get(p.idProducto) || 0) <= 0 || !p.activo,
+      agotado: (mapaStock.get(p.idProducto) || 0) <= 0,
     }))
     renderizarProductos(todosLosProductos)
   } catch (error) {
@@ -36,9 +53,7 @@ async function cargarCategoriasEnSidebar() {
         ${cat.nombre}
       </button>
     `).join('')
-  } catch {
-    // Si falla, el sidebar solo muestra "Todas"
-  }
+  } catch {}
 }
 
 function seleccionarCategoria(nombre, boton) {
@@ -57,16 +72,15 @@ function actualizarPrecio(input) {
 }
 
 function filtrarProductos() {
-  const termino       = document.getElementById('buscador').value.toLowerCase()
-  const soloDisponibles = document.getElementById('solo-disponibles').checked
+  const termino         = document.getElementById('buscador').value.toLowerCase()
+  const soloDisponibles = esAdmin && document.getElementById('solo-disponibles').checked
 
   const filtrados = todosLosProductos.filter(p => {
-    const coincideTexto = !termino ||
-      p.nombreProducto.toLowerCase().includes(termino) ||
-      (p.categoriaProducto || '').toLowerCase().includes(termino)
+    const coincideTexto     = !termino || p.nombreProducto.toLowerCase().includes(termino) ||
+                              (p.categoriaProducto || '').toLowerCase().includes(termino)
     const coincideCategoria = !categoriaActiva || p.categoriaProducto === categoriaActiva
     const coincidePrecio    = Number(p.precioProducto) <= precioMaxActivo
-    const coincideStock     = !soloDisponibles || !p.agotado
+    const coincideStock     = esAdmin ? (!soloDisponibles || !p.agotado) : !p.agotado
     return coincideTexto && coincideCategoria && coincidePrecio && coincideStock
   })
 
@@ -77,30 +91,55 @@ function limpiarFiltros() {
   document.getElementById('buscador').value = ''
   document.getElementById('filtro-precio-max').value = 100000
   document.getElementById('precio-display').textContent = 'Sin límite'
-  document.getElementById('solo-disponibles').checked = false
+  const cb = document.getElementById('solo-disponibles')
+  if (cb) cb.checked = false
   document.querySelectorAll('.btn-categoria').forEach(b => b.classList.remove('activo'))
   document.querySelector('.btn-categoria').classList.add('activo')
-  categoriaActiva   = ''
-  precioMaxActivo   = Infinity
+  categoriaActiva = ''
+  precioMaxActivo = Infinity
   renderizarProductos(todosLosProductos)
 }
 
 function renderizarProductos(productos) {
   const grilla = document.getElementById('grilla-productos')
-  document.getElementById('conteo').textContent =
-    `${productos.length} producto${productos.length !== 1 ? 's' : ''}`
 
-  if (!productos.length) {
-    grilla.innerHTML = '<p class="placeholder">No hay productos para mostrar.</p>'
+  // Clientes nunca ven productos sin stock
+  const visibles = esAdmin ? productos : productos.filter(p => !p.agotado)
+
+  document.getElementById('conteo').textContent =
+    `${visibles.length} producto${visibles.length !== 1 ? 's' : ''}`
+
+  if (!visibles.length) {
+    grilla.innerHTML = '<p class="placeholder">No hay productos disponibles.</p>'
     return
   }
 
-  grilla.innerHTML = productos.map(p => {
-    const indicadorStock = p.agotado
-      ? '<span class="sin-stock">Sin stock</span>'
-      : p.cantidadDisponible <= 5
-        ? `<span class="stock-bajo">⚠ Quedan ${p.cantidadDisponible}</span>`
-        : `<span class="stock-ok">${p.cantidadDisponible} disponibles</span>`
+  grilla.innerHTML = visibles.map(p => {
+    let indicadorStock
+    if (esAdmin) {
+      if (p.agotado) {
+        indicadorStock = '<span class="sin-stock">Sin stock</span>'
+      } else if (p.cantidadDisponible <= 5) {
+        indicadorStock = `<span class="stock-bajo">⚠ Quedan ${p.cantidadDisponible}</span>`
+      } else {
+        indicadorStock = `<span class="stock-ok">${p.cantidadDisponible} disponibles</span>`
+      }
+    } else {
+      indicadorStock = p.cantidadDisponible <= 5
+        ? '<span class="stock-bajo">⚠ Pocas unidades</span>'
+        : '<span class="stock-ok">Disponible</span>'
+    }
+
+    const acciones = esAdmin
+      ? `<div style="padding:6px 14px 14px;">
+           <span style="font-size:0.78rem; color:var(--texto-suave); font-style:italic;">Vista previa</span>
+         </div>`
+      : `<div class="acciones-producto">
+           <input type="number" id="cant-${p.idProducto}" value="1" min="1" max="${p.cantidadDisponible}">
+           <button class="boton-principal" onclick="agregarProductoAlCarrito(${p.idProducto})">
+             Agregar
+           </button>
+         </div>`
 
     return `
       <div class="producto-tarjeta ${p.agotado ? 'agotado' : ''}">
@@ -111,13 +150,7 @@ function renderizarProductos(productos) {
         <p class="meta">${p.categoriaProducto || ''}</p>
         ${indicadorStock}
         <p class="precio">${formatearMoneda(p.precioProducto)}</p>
-        ${!p.agotado ? `
-          <div class="acciones-producto">
-            <input type="number" id="cant-${p.idProducto}" value="1" min="1" max="${p.cantidadDisponible}">
-            <button class="boton-principal" onclick="agregarProductoAlCarrito(${p.idProducto})">
-              Agregar
-            </button>
-          </div>` : ''}
+        ${acciones}
       </div>
     `
   }).join('')
@@ -143,6 +176,7 @@ function agregarProductoAlCarrito(idProducto) {
 function actualizarBadgeCarrito() {
   const total = obtenerCarrito().reduce((s, a) => s + a.cantidad, 0)
   const badge = document.getElementById('badge-carrito')
+  if (!badge) return
   if (total > 0) { badge.textContent = total; badge.style.display = 'inline' }
   else badge.style.display = 'none'
 }

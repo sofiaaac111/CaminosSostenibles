@@ -36,23 +36,36 @@ function nombreProducto(id) {
 // ── Scanner de código de barras ───────────────────────────────────────────────
 
 function iniciarScanner() {
+  const resultado = document.getElementById('resultado-scanner')
   if (scanner) return
-  scanner = new Html5Qrcode('contenedor-scanner')
-  scanner.start(
-    { facingMode: 'environment' },
-    { fps: 15, qrbox: { width: 280, height: 120 } },
-    (codigoDetectado) => {
-      document.getElementById('resultado-scanner').textContent =
-        `Código detectado: ${codigoDetectado}`
-      buscarProductoPorCodigo(codigoDetectado)
-      detenerScanner()
-    },
-    () => {}
-  ).catch(error => {
-    document.getElementById('resultado-scanner').textContent =
-      'No se pudo acceder a la cámara: ' + error
+
+  if (typeof Html5Qrcode === 'undefined') {
+    resultado.textContent = '⚠️ La librería del scanner no cargó. Recarga la página con conexión estable.'
+    return
+  }
+
+  try {
+    scanner = new Html5Qrcode('contenedor-scanner')
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 15, qrbox: { width: 250, height: 250 } },
+      (codigoDetectado) => {
+        resultado.textContent = `Código detectado: ${codigoDetectado}`
+        buscarProductoPorCodigo(codigoDetectado)
+        detenerScanner()
+      },
+      () => {}
+    ).catch(error => {
+      const msg = String(error).toLowerCase()
+      resultado.textContent = (msg.includes('permission') || msg.includes('notallowed') || msg.includes('denied'))
+        ? '⚠️ Permiso denegado. En iPhone: Ajustes → Safari → Cámara → Permitir, luego recarga.'
+        : '⚠️ No se pudo abrir la cámara: ' + error
+      scanner = null
+    })
+  } catch (error) {
+    resultado.textContent = '⚠️ Error al iniciar el scanner: ' + error
     scanner = null
-  })
+  }
 }
 
 function detenerScanner() {
@@ -85,6 +98,40 @@ function mostrarFormularioRegistro(codigo) {
 
 function ocultarFormularioRegistro() {
   document.getElementById('formulario-nuevo-producto').reset()
+  const preview = document.getElementById('nuevo-imagen-preview')
+  const data    = document.getElementById('nuevo-imagen-data')
+  if (preview) preview.style.display = 'none'
+  if (data)    data.value = ''
+}
+
+function previsualizarImagen(input) {
+  const file = input.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const img = new Image()
+    img.onload = () => {
+      const MAX = 500
+      let w = img.width, h = img.height
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+        else        { w = Math.round(w * MAX / h); h = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, w, h)
+      ctx.drawImage(img, 0, 0, w, h)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.78)
+      document.getElementById('nuevo-imagen-data').value = dataUrl
+      const preview = document.getElementById('nuevo-imagen-preview')
+      preview.src = dataUrl
+      preview.style.display = 'block'
+    }
+    img.src = e.target.result
+  }
+  reader.readAsDataURL(file)
 }
 
 async function registrarNuevoProducto(evento) {
@@ -101,25 +148,34 @@ async function registrarNuevoProducto(evento) {
       idCategoria:         Number(document.getElementById('nuevo-categoria').value),
       precioProducto:      Number(document.getElementById('nuevo-precio').value),
       unidadMedida:        document.getElementById('nuevo-unidad').value,
-      imagenUrl:           document.getElementById('nuevo-imagen').value,
+      imagenUrl:           document.getElementById('nuevo-imagen-data').value,
       descripcionProducto: document.getElementById('nuevo-descripcion').value,
     }
     const producto = await crearProducto(datos)
 
-    // Actualizar mapa local de nombres
     mapaProductos.set(Number(producto.idProducto), producto.nombreProducto)
-
-    // Prellenar formulario de stock con el nuevo producto
     document.getElementById('id-producto-stock').value = producto.idProducto
     document.getElementById('resultado-scanner').textContent =
       `✓ Producto registrado: ${producto.nombreProducto} (ID: ${producto.idProducto}). Ahora ingresa el lote de stock.`
 
+    boton.textContent = '✓ Producto registrado'
+    boton.style.background = '#16a34a'
+
     mostrarNotificacion(notif, `Producto "${producto.nombreProducto}" registrado correctamente. Completa el stock a continuación.`)
-    ocultarFormularioRegistro()
+    notif.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+    setTimeout(() => {
+      ocultarFormularioRegistro()
+      boton.disabled = false
+      boton.textContent = 'Registrar producto y continuar'
+      boton.style.background = ''
+    }, 2500)
+
   } catch (error) {
     mostrarNotificacion(notif, error.message, 'error')
     boton.disabled = false
     boton.textContent = 'Registrar producto y continuar'
+    boton.style.background = ''
   }
 }
 

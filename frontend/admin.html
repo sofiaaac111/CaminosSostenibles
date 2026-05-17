@@ -14,7 +14,8 @@
   <div class="cabecera-nav">
     <a href="/admin.html" class="activo">Administrador</a>
     <a href="/bodega.html">Bodega</a>
-    <a href="/catalogo.html">Tienda</a>
+    <a href="/catalogo.html">Vista catálogo</a>
+    <button onclick="cerrarSesion()">Cerrar sesión</button>
   </div>
 </nav>
 
@@ -91,11 +92,40 @@
       </label>
       <label>
         Unidad de medida
-        <input type="text" id="unidad" placeholder="Ej: kg, litro, unidad">
+        <select id="unidad" style="padding:10px 14px; border:1.5px solid var(--borde); border-radius:8px; font-family:inherit; background:white;">
+          <option value="">Selecciona una unidad</option>
+          <optgroup label="Peso">
+            <option value="g">g — Gramo</option>
+            <option value="kg">kg — Kilogramo</option>
+            <option value="mg">mg — Miligramo</option>
+            <option value="lb">lb — Libra</option>
+          </optgroup>
+          <optgroup label="Volumen">
+            <option value="mL">mL — Mililitro</option>
+            <option value="L">L — Litro</option>
+          </optgroup>
+          <optgroup label="Conteo">
+            <option value="und">und — Unidad</option>
+            <option value="doc">doc — Docena</option>
+            <option value="par">par — Par</option>
+          </optgroup>
+          <optgroup label="Empaque">
+            <option value="paq">paq — Paquete</option>
+            <option value="caja">caja — Caja</option>
+            <option value="bolsa">bolsa — Bolsa</option>
+            <option value="botella">botella — Botella</option>
+            <option value="frasco">frasco — Frasco</option>
+            <option value="barra">barra — Barra</option>
+            <option value="rollo">rollo — Rollo</option>
+          </optgroup>
+        </select>
       </label>
       <label>
-        URL de imagen
-        <input type="url" id="imagen" placeholder="https://...">
+        Imagen del producto
+        <input type="file" id="imagen-file" accept="image/*" onchange="previsualizarImagenAdmin(this)">
+        <img id="imagen-preview" style="display:none; max-height:140px; margin-top:8px; border-radius:8px; object-fit:contain; border:1px solid var(--borde);">
+        <input type="hidden" id="imagen-data">
+        <input type="hidden" id="imagen-url-original">
       </label>
       <label class="ancho-completo">
         Descripción
@@ -111,7 +141,10 @@
   <!-- ── TABLA DE PRODUCTOS ─────────────────────────────────────────── -->
   <div class="tarjeta">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <h2>Catálogo de productos</h2>
+      <div>
+        <h2>Catálogo de productos</h2>
+        <p class="subtitulo">Presiona <strong>✏️ Editar</strong> en cualquier producto para modificarlo.</p>
+      </div>
       <div class="barra-filtros" style="margin:0;">
         <input type="text" id="buscador" placeholder="Buscar..." oninput="filtrarProductos()">
       </div>
@@ -169,7 +202,7 @@
 .metrica-valor { font-size: 1.5rem; font-weight: 700; color: var(--acento); }
 </style>
 
-<script src="/js/api.js?v=3"></script>
-<script src="/js/admin.js?v=3"></script>
+<script src="/js/api.js?v=5"></script>
+<script src="/js/admin.js?v=5"></script>
 </body>
 </html>

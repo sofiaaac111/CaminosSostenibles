@@ -150,7 +150,7 @@ function obtenerSesion() {
 function cerrarSesion() {
   localStorage.removeItem('sesion')
   localStorage.removeItem('carrito')
-  window.location.href = '/auth.html'
+  window.location.href = '/index.html'
 }
 
 function verificarSesion() {

@@ -160,18 +160,31 @@
 <nav class="cabecera">
   <span class="cabecera-marca">Caminos Sostenibles</span>
   <div class="cabecera-nav">
-    <a href="/catalogo.html" class="activo">Catálogo</a>
-    <a href="/carrito.html">
+    <!-- Nav cliente -->
+    <a href="/catalogo.html" class="activo nav-cliente">Catálogo</a>
+    <a href="/carrito.html" class="nav-cliente">
       Carrito <span class="badge-carrito" id="badge-carrito" style="display:none;"></span>
     </a>
-    <a href="/pedidos.html">Mis pedidos</a>
-    <a href="/perfil.html">Mi perfil</a>
-    <button onclick="cerrarSesion()">Salir</button>
+    <a href="/pedidos.html" class="nav-cliente">Mis pedidos</a>
+    <a href="/perfil.html" class="nav-cliente">Mi perfil</a>
+    <button class="nav-cliente" onclick="cerrarSesion()">Salir</button>
+    <!-- Nav admin (oculto por defecto, JS lo muestra) -->
+    <div id="nav-admin" style="display:none; gap:4px; align-items:center;">
+      <a href="/admin.html">Administrador</a>
+      <a href="/bodega.html">Bodega</a>
+      <button onclick="cerrarSesion()">Salir</button>
+    </div>
   </div>
 </nav>
 
 <div class="contenedor">
   <div id="notificacion"></div>
+
+  <!-- Banner modo admin (oculto por defecto) -->
+  <div id="banner-admin" style="display:none; background:#1a1a2e; color:#fff; border-radius:10px; padding:12px 20px; margin-bottom:16px; display:none; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+    <span style="font-weight:700; font-size:0.95rem;">👁 Vista previa del catálogo — Modo administrador</span>
+    <span style="font-size:0.82rem; opacity:0.75;">Los clientes no ven productos sin stock ni cantidades exactas</span>
+  </div>
 
   <!-- Barra de búsqueda superior -->
   <div class="barra-superior">
@@ -197,7 +210,7 @@
         <p class="precio-display" id="precio-display">Sin límite</p>
       </div>
 
-      <div class="sidebar-seccion">
+      <div class="sidebar-seccion" id="sidebar-disponibilidad">
         <h3>Disponibilidad</h3>
         <label style="display:flex; align-items:center; gap:8px; font-size:0.875rem; cursor:pointer;">
           <input type="checkbox" id="solo-disponibles" onchange="filtrarProductos()"

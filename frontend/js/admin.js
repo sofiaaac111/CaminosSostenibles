@@ -52,9 +52,9 @@ function renderizarTablaProductos(productos) {
       <td>${p.categoriaProducto}</td>
       <td>${formatearMoneda(p.precioProducto)}</td>
       <td>${p.activo ? '✅ Activo' : '❌ Inactivo'}</td>
-      <td style="display:flex; gap:6px;">
-        <button class="boton-secundario" onclick="cargarParaEditar(${p.idProducto})">Editar</button>
-        <button class="boton-secundario" onclick="toggleEstado(${p.idProducto}, ${p.activo})">
+      <td style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button class="boton-principal" onclick="cargarParaEditar(${p.idProducto})" style="padding:8px 16px; font-size:0.82rem;">✏️ Editar</button>
+        <button class="boton-secundario" onclick="toggleEstado(${p.idProducto}, ${p.activo})" style="padding:8px 16px; font-size:0.82rem;">
           ${p.activo ? 'Desactivar' : 'Activar'}
         </button>
       </td>
@@ -75,14 +75,18 @@ function filtrarProductos() {
 function cargarParaEditar(id) {
   const p = todosLosProductos.find(p => p.idProducto === id)
   if (!p) return
-  document.getElementById('id-producto').value   = p.idProducto
-  document.getElementById('codigo').value         = p.codigoProducto
-  document.getElementById('nombre').value         = p.nombreProducto
-  document.getElementById('categoria').value      = p.categoria?.idCategoria || ''
-  document.getElementById('precio').value         = p.precioProducto
-  document.getElementById('unidad').value         = p.unidadMedida || ''
-  document.getElementById('imagen').value         = p.imagenUrl || ''
-  document.getElementById('descripcion').value    = p.descripcionProducto || ''
+  document.getElementById('id-producto').value        = p.idProducto
+  document.getElementById('codigo').value              = p.codigoProducto
+  document.getElementById('nombre').value              = p.nombreProducto
+  document.getElementById('categoria').value           = p.categoria?.idCategoria || ''
+  document.getElementById('precio').value              = p.precioProducto
+  document.getElementById('unidad').value              = p.unidadMedida || ''
+  document.getElementById('descripcion').value         = p.descripcionProducto || ''
+  document.getElementById('imagen-data').value         = ''
+  document.getElementById('imagen-url-original').value = p.imagenUrl || ''
+  const preview = document.getElementById('imagen-preview')
+  if (p.imagenUrl) { preview.src = p.imagenUrl; preview.style.display = 'block' }
+  else preview.style.display = 'none'
   document.getElementById('titulo-formulario').textContent = `Editando producto #${id}`
   document.getElementById('tarjeta-producto').style.display = 'block'
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -93,6 +97,39 @@ function cancelarEdicion() {
   document.getElementById('id-producto').value = ''
   document.getElementById('titulo-formulario').textContent = 'Editar producto'
   document.getElementById('tarjeta-producto').style.display = 'none'
+  document.getElementById('imagen-preview').style.display = 'none'
+  document.getElementById('imagen-data').value = ''
+  document.getElementById('imagen-url-original').value = ''
+}
+
+function previsualizarImagenAdmin(input) {
+  const file = input.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const img = new Image()
+    img.onload = () => {
+      const MAX = 500
+      let w = img.width, h = img.height
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+        else        { w = Math.round(w * MAX / h); h = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, w, h)
+      ctx.drawImage(img, 0, 0, w, h)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.78)
+      document.getElementById('imagen-data').value = dataUrl
+      const preview = document.getElementById('imagen-preview')
+      preview.src = dataUrl
+      preview.style.display = 'block'
+    }
+    img.src = e.target.result
+  }
+  reader.readAsDataURL(file)
 }
 
 async function toggleEstado(id, estadoActual) {
@@ -115,7 +152,8 @@ document.getElementById('formulario-producto').addEventListener('submit', async 
     idCategoria:         Number(document.getElementById('categoria').value),
     precioProducto:      Number(document.getElementById('precio').value),
     unidadMedida:        document.getElementById('unidad').value,
-    imagenUrl:           document.getElementById('imagen').value,
+    imagenUrl:           document.getElementById('imagen-data').value ||
+                         document.getElementById('imagen-url-original').value,
     descripcionProducto: document.getElementById('descripcion').value,
   }
   try {

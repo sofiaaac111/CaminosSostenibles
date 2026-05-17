@@ -6,6 +6,11 @@
   <title>Bodega – Caminos Sostenibles</title>
   <link rel="stylesheet" href="/css/estilos.css">
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    @media (max-width: 768px) {
+      .fila-scanner { grid-template-columns: 1fr !important; }
+    }
+  </style>
 </head>
 <body>
 
@@ -14,7 +19,8 @@
   <div class="cabecera-nav">
     <a href="/admin.html">Administrador</a>
     <a href="/bodega.html" class="activo">Bodega</a>
-    <a href="/catalogo.html">Tienda</a>
+    <a href="/catalogo.html">Vista catálogo</a>
+    <button onclick="cerrarSesion()">Cerrar sesión</button>
   </div>
 </nav>
 
@@ -22,7 +28,7 @@
   <div id="notificacion"></div>
 
   <!-- ── FILA 1: Scanner + Formulario de stock ──────────────────── -->
-  <div class="grid-2">
+  <div class="fila-scanner" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
 
     <div class="tarjeta">
       <h2>Escáner de código de barras</h2>
@@ -69,7 +75,7 @@
     <form class="formulario" id="formulario-nuevo-producto" onsubmit="registrarNuevoProducto(event)">
       <label>
         Código de barras
-        <input type="text" id="nuevo-codigo" readonly style="font-weight:600; background:var(--fondo);">
+        <input type="text" id="nuevo-codigo" placeholder="Escanea o escribe el código" required>
       </label>
       <label>
         Nombre del producto
@@ -77,7 +83,7 @@
       </label>
       <label>
         Categoría
-        <select id="nuevo-categoria" required style="padding:8px 12px; border:1.5px solid var(--borde); border-radius:8px; font-family:inherit; background:white;">
+        <select id="nuevo-categoria" required style="padding:10px 14px; border:1.5px solid var(--borde); border-radius:8px; font-family:inherit; background:white;">
           <option value="">Selecciona una categoría</option>
         </select>
       </label>
@@ -87,11 +93,39 @@
       </label>
       <label>
         Unidad de medida
-        <input type="text" id="nuevo-unidad" placeholder="Ej: kg, litro, unidad">
+        <select id="nuevo-unidad" style="padding:10px 14px; border:1.5px solid var(--borde); border-radius:8px; font-family:inherit; background:white;">
+          <option value="">Selecciona una unidad</option>
+          <optgroup label="Peso">
+            <option value="g">g — Gramo</option>
+            <option value="kg">kg — Kilogramo</option>
+            <option value="mg">mg — Miligramo</option>
+            <option value="lb">lb — Libra</option>
+          </optgroup>
+          <optgroup label="Volumen">
+            <option value="mL">mL — Mililitro</option>
+            <option value="L">L — Litro</option>
+          </optgroup>
+          <optgroup label="Conteo">
+            <option value="und">und — Unidad</option>
+            <option value="doc">doc — Docena</option>
+            <option value="par">par — Par</option>
+          </optgroup>
+          <optgroup label="Empaque">
+            <option value="paq">paq — Paquete</option>
+            <option value="caja">caja — Caja</option>
+            <option value="bolsa">bolsa — Bolsa</option>
+            <option value="botella">botella — Botella</option>
+            <option value="frasco">frasco — Frasco</option>
+            <option value="barra">barra — Barra</option>
+            <option value="rollo">rollo — Rollo</option>
+          </optgroup>
+        </select>
       </label>
       <label>
-        URL de imagen (opcional)
-        <input type="url" id="nuevo-imagen" placeholder="https://...">
+        Imagen del producto (opcional)
+        <input type="file" id="nuevo-imagen-file" accept="image/*" onchange="previsualizarImagen(this)">
+        <img id="nuevo-imagen-preview" style="display:none; max-height:140px; margin-top:8px; border-radius:8px; object-fit:contain; border:1px solid var(--borde);">
+        <input type="hidden" id="nuevo-imagen-data">
       </label>
       <label class="ancho-completo">
         Descripción (opcional)
@@ -173,7 +207,7 @@
 
 </div>
 
-<script src="/js/api.js?v=3"></script>
-<script src="/js/bodega.js?v=3"></script>
+<script src="/js/api.js?v=7"></script>
+<script src="/js/bodega.js?v=7"></script>
 </body>
 </html>
