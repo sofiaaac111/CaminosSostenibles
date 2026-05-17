@@ -9,12 +9,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "lotes_producto")
+@Table(name = "lotes_producto", uniqueConstraints = {
+    @UniqueConstraint(name = "unico_lote_por_producto", columnNames = {"numero_lote", "id_producto"})
+})
 public class Lote {
 
     @Id
@@ -22,24 +22,18 @@ public class Lote {
     @Column(name = "id_lote")
     private Long idLote;
 
-    @NotBlank
-    @Column(name = "numero_lote", unique = true)
+    @Column(name = "numero_lote")
     private String numeroLote;
 
-    @NotNull
     @Column(name = "id_producto")
     private Long idProducto;
 
-    @NotNull
-    @Positive
     @Column(name = "cantidad_lote")
     private BigDecimal cantidadLote;
 
-    @NotNull
     @Column(name = "fecha_vencimiento")
     private LocalDate fechaVencimiento;
 
-    @NotNull
     @Column(name = "fecha_ingreso")
     private LocalDate fechaIngreso;
 
