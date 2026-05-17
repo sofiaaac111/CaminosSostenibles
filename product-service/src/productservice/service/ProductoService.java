@@ -38,6 +38,9 @@ public class ProductoService {
 
     public Producto crearProducto(Producto producto) {
         resolverCategoria(producto);
+        if (producto.getCategoria() != null) {
+            producto.setCategoriaProducto(producto.getCategoria().getNombre());
+        }
         if (producto.getActivo() == null) {
             producto.setActivo(false);
         }
@@ -61,6 +64,9 @@ public class ProductoService {
             if (datosProducto.getIdCategoria() != null) {
                 resolverCategoria(datosProducto);
                 producto.setCategoria(datosProducto.getCategoria());
+                if (datosProducto.getCategoria() != null) {
+                    producto.setCategoriaProducto(datosProducto.getCategoria().getNombre());
+                }
             }
             return productoRepository.save(producto);
         }

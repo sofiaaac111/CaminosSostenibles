@@ -34,6 +34,9 @@ public class Producto {
     @Column(name = "descripcion_producto")
     private String descripcionProducto;
 
+    @Column(name = "categoria_producto")
+    private String categoriaProducto;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_categoria")
     @JsonIgnoreProperties("productos")
@@ -75,7 +78,11 @@ public class Producto {
     public void setCategoria(Categoria categoria) { this.categoria = categoria; }
 
     public String getCategoriaProducto() {
-        return categoria != null ? categoria.getNombre() : null;
+        return categoria != null ? categoria.getNombre() : categoriaProducto;
+    }
+
+    public void setCategoriaProducto(String categoriaProducto) {
+        this.categoriaProducto = categoriaProducto;
     }
 
     public Long getIdCategoria() { return idCategoria; }
