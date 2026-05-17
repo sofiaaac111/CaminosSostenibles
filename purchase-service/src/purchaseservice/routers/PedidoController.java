@@ -15,8 +15,6 @@ import purchaseservice.schemas.FormularioCompra;
 import purchaseservice.schemas.DatosPedido;
 import purchaseservice.service.PedidoService;
 
-import jakarta.validation.Valid;
-
 @RestController
 @RequestMapping("/api/pedidos")
 @CrossOrigin(origins = "*")
@@ -29,7 +27,7 @@ public class PedidoController {
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<DatosPedido> checkout(@Valid @RequestBody FormularioCompra request) {
+    public ResponseEntity<DatosPedido> checkout(@RequestBody FormularioCompra request) {
         DatosPedido response = pedidoService.checkout(request);
         return ResponseEntity.ok(response);
     }
