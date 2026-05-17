@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(name = "inventory-service", url = "${inventory-service.url}")
+@FeignClient(name = "inventory-service", url = "http://host.docker.internal:8082")
 public interface ClienteInventario {
 
     @PostMapping("/api/inventario/reducir-stock")

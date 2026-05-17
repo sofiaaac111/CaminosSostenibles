@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import purchaseservice.schemas.ResumenProducto;
 
-@FeignClient(name = "product-service", url = "${product-service.url}")
+@FeignClient(name = "product-service", url = "http://host.docker.internal:8081")
 public interface ClienteProductos {
 
     @GetMapping("/api/productos/{id}")
