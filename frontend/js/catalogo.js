@@ -3,6 +3,10 @@ let categoriaActiva   = ''
 let precioMaxActivo   = Infinity
 let esAdmin           = false
 
+function buscarProductoPorId(idProducto) {
+  return todosLosProductos.find(p => String(p.idProducto) === String(idProducto))
+}
+
 window.addEventListener('load', async () => {
   const sesion = obtenerSesion()
   esAdmin = !!(sesion && (sesion.rol === 'ADMIN' || sesion.rol === 'BODEGUERO'))
@@ -135,8 +139,15 @@ function renderizarProductos(productos) {
            <span style="font-size:0.78rem; color:var(--texto-suave); font-style:italic;">Vista previa</span>
          </div>`
       : `<div class="acciones-producto">
-           <input type="number" id="cant-${p.idProducto}" value="1" min="1" max="${p.cantidadDisponible}">
-           <button class="boton-principal" onclick="agregarProductoAlCarrito(${p.idProducto})">
+           <label class="cantidad-producto" for="cant-${p.idProducto}">
+             Cantidad
+             <span class="cantidad-control">
+               <button type="button" class="boton-cantidad" onclick="cambiarCantidadProducto('${p.idProducto}', -1)">-</button>
+               <input type="number" id="cant-${p.idProducto}" value="1" min="1" max="${p.cantidadDisponible}" onchange="validarCantidadProducto('${p.idProducto}')">
+               <button type="button" class="boton-cantidad" onclick="cambiarCantidadProducto('${p.idProducto}', 1)">+</button>
+             </span>
+           </label>
+           <button class="boton-principal" onclick="agregarProductoAlCarrito('${p.idProducto}')">
              Agregar
            </button>
          </div>`
@@ -156,11 +167,32 @@ function renderizarProductos(productos) {
   }).join('')
 }
 
+function validarCantidadProducto(idProducto) {
+  const producto = buscarProductoPorId(idProducto)
+  const input = document.getElementById(`cant-${idProducto}`)
+  if (!producto || !input) return 1
+
+  const cantidad = Math.min(
+    Math.max(Number(input.value) || 1, 1),
+    producto.cantidadDisponible
+  )
+  input.value = cantidad
+  return cantidad
+}
+
+function cambiarCantidadProducto(idProducto, cambio) {
+  const input = document.getElementById(`cant-${idProducto}`)
+  if (!input) return
+
+  input.value = (Number(input.value) || 1) + cambio
+  validarCantidadProducto(idProducto)
+}
+
 function agregarProductoAlCarrito(idProducto) {
-  const producto = todosLosProductos.find(p => p.idProducto === idProducto)
+  const producto = buscarProductoPorId(idProducto)
   if (!producto || producto.agotado) return
 
-  const cantidad = Number(document.getElementById(`cant-${idProducto}`).value) || 1
+  const cantidad = validarCantidadProducto(idProducto)
   if (cantidad > producto.cantidadDisponible) {
     alert('La cantidad supera el stock disponible.')
     return
@@ -180,3 +212,7 @@ function actualizarBadgeCarrito() {
   if (total > 0) { badge.textContent = total; badge.style.display = 'inline' }
   else badge.style.display = 'none'
 }
+
+window.validarCantidadProducto = validarCantidadProducto
+window.cambiarCantidadProducto = cambiarCantidadProducto
+window.agregarProductoAlCarrito = agregarProductoAlCarrito
