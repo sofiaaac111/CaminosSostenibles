@@ -76,12 +76,8 @@ public class InventarioController {
             @RequestParam Long idProducto,
             @RequestParam BigDecimal cantidad,
             @RequestParam Long idCliente) {
-        try {
-            Long idReserva = inventarioService.reservarStock(idProducto, cantidad, idCliente);
-            return ResponseEntity.ok(idReserva);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        Long idReserva = inventarioService.reservarStock(idProducto, cantidad, idCliente);
+        return ResponseEntity.ok(idReserva);
     }
 
     @PostMapping("/confirmar-reserva")
