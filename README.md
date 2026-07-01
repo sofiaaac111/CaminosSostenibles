@@ -1,13 +1,8 @@
 # Caminos Sostenibles Market
 
-Sistema ERP de gestión para un supermercado en línea, basado en microservicios con Spring Boot y frontend en HTML + CSS + JavaScript puro.
+Sistema ERP de gestión para un supermercado en línea. El proyecto evolucionó de una aplicación monolítica en Java (NetBeans) a una arquitectura distribuida de microservicios con Spring Boot, Docker y bases de datos independientes en la nube.
 
----
-
-## Requisitos previos
-
-- Docker Desktop corriendo
-- Archivo `.env` en la raíz del proyecto (ver sección Variables de entorno)
+Desarrollado a lo largo de varios semestres como proyecto académico principal, aplicado en las materias de Sistemas Transaccionales y Sistemas Distribuidos.
 
 ---
 
@@ -21,7 +16,7 @@ El proyecto corre dividido entre dos máquinas físicas con sistemas operativos 
 | VM Ubuntu (Lima) | Ubuntu 22.04 | product-service · inventory-service |
 | Railway (cloud) | Linux | 4 bases de datos MySQL |
 
-> Ver [ARRANQUE.md](ARRANQUE.md) para el paso a paso detallado de cómo encender cada máquina.
+Ver `ARRANQUE.md` para el paso a paso detallado de cómo encender cada máquina.
 
 ---
 
@@ -40,10 +35,16 @@ nginx  (Docker · Mac · :3000)
 
 ---
 
+## Requisitos previos
+
+- Docker Desktop corriendo
+- Archivo `.env` en la raíz del proyecto (ver sección Variables de entorno)
+
+---
+
 ## Arranque rápido
 
-### 1 — Primero en Ubuntu (Lima)
-
+**1 — Primero en Ubuntu (Lima)**
 ```bash
 limactl start ubuntu-cs
 limactl shell ubuntu-cs
@@ -52,20 +53,17 @@ cd CaminosSostenibles
 docker-compose up product-service inventory-service
 ```
 
-### 2 — Luego en el Mac
-
+**2 — Luego en el Mac**
 ```bash
 docker compose up frontend customer-service purchase-service
 ```
 
-### 3 — Abrir la app
-
+**3 — Abrir la app**
 ```
 http://localhost:3000
 ```
 
 Para ver el link HTTPS (acceso desde celular):
-
 ```bash
 docker compose logs cloudflared
 ```
@@ -74,43 +72,43 @@ docker compose logs cloudflared
 
 ## Puertos
 
-| Servicio           | Puerto | Máquina  | Descripción                     |
-|--------------------|--------|----------|---------------------------------|
-| **Frontend**       | 3000   | Mac      | Interfaz web (nginx)            |
-| product-service    | 8081   | Ubuntu   | CRUD de productos y categorías  |
-| inventory-service  | 8082   | Ubuntu   | Stock, lotes, reservas          |
-| customer-service   | 8085   | Mac      | Registro, login, perfil, roles  |
-| purchase-service   | 8086   | Mac      | Checkout e historial de pedidos |
+| Servicio | Puerto | Máquina | Descripción |
+|---|---|---|---|
+| Frontend | 3000 | Mac | Interfaz web (nginx) |
+| product-service | 8081 | Ubuntu | CRUD de productos y categorías |
+| inventory-service | 8082 | Ubuntu | Stock, lotes, reservas |
+| customer-service | 8085 | Mac | Registro, login, perfil, roles |
+| purchase-service | 8086 | Mac | Checkout e historial de pedidos |
 
 ---
 
 ## Páginas del frontend
 
-| URL                               | Página              | Acceso          |
-|-----------------------------------|---------------------|-----------------|
-| http://localhost:3000             | Landing             | Todos           |
-| http://localhost:3000/auth.html   | Login / Registro    | Clientes        |
+| URL | Página | Acceso |
+|---|---|---|
+| http://localhost:3000 | Landing | Todos |
+| http://localhost:3000/auth.html | Login / Registro | Clientes |
 | http://localhost:3000/login-admin.html | Acceso personal | Admin / Bodeguero |
-| http://localhost:3000/catalogo.html | Catálogo con filtros | Cliente       |
-| http://localhost:3000/carrito.html  | Carrito            | Cliente         |
-| http://localhost:3000/checkout.html | Pago simulado      | Cliente         |
-| http://localhost:3000/factura.html  | Factura de venta   | Cliente         |
-| http://localhost:3000/pedidos.html  | Historial pedidos  | Cliente         |
-| http://localhost:3000/perfil.html   | Mi perfil          | Cliente         |
-| http://localhost:3000/admin.html    | Panel administrador | ADMIN          |
-| http://localhost:3000/bodega.html   | Panel bodega       | ADMIN / BODEGUERO |
+| http://localhost:3000/catalogo.html | Catálogo con filtros | Cliente |
+| http://localhost:3000/carrito.html | Carrito | Cliente |
+| http://localhost:3000/checkout.html | Pago simulado | Cliente |
+| http://localhost:3000/factura.html | Factura de venta | Cliente |
+| http://localhost:3000/pedidos.html | Historial pedidos | Cliente |
+| http://localhost:3000/perfil.html | Mi perfil | Cliente |
+| http://localhost:3000/admin.html | Panel administrador | ADMIN |
+| http://localhost:3000/bodega.html | Panel bodega | ADMIN / BODEGUERO |
 
-> El sistema redirige automáticamente según el rol al iniciar sesión. Un cliente no puede acceder a `/admin.html` ni `/bodega.html`.
+El sistema redirige automáticamente según el rol al iniciar sesión. Un cliente no puede acceder a `/admin.html` ni `/bodega.html`.
 
 ---
 
 ## Roles de usuario
 
-| Rol       | Acceso                                              |
-|-----------|-----------------------------------------------------|
-| CLIENTE   | Catálogo, carrito, checkout, pedidos, perfil        |
-| BODEGUERO | Panel de bodega (semáforo, stock, lotes, escáner)   |
-| ADMIN     | Panel administrador (dashboard, productos, pedidos) + bodega |
+| Rol | Acceso |
+|---|---|
+| CLIENTE | Catálogo, carrito, checkout, pedidos, perfil |
+| BODEGUERO | Panel de bodega (semáforo, stock, lotes, escáner) |
+| ADMIN | Panel administrador (dashboard, productos, pedidos) + bodega |
 
 El rol se asigna en la base de datos. El registro público crea siempre un `CLIENTE`. Para crear un `ADMIN` o `BODEGUERO`, inserta directamente en la tabla `clientes` con el campo `rol` correspondiente.
 
@@ -119,7 +117,6 @@ El rol se asigna en la base de datos. El registro público crea siempre un `CLIE
 ## Endpoints por microservicio
 
 ### product-service — puerto 8081
-
 ```
 GET    /api/productos                         → listar todos los productos
 GET    /api/productos/{id}                    → obtener por ID
@@ -133,7 +130,6 @@ DELETE /api/productos/{id}                    → eliminar
 ```
 
 ### inventory-service — puerto 8082
-
 ```
 GET  /api/inventario/existencias                          → stock de todos los productos
 GET  /api/inventario/existencias/{idProducto}             → stock de un producto
@@ -144,11 +140,9 @@ POST /api/inventario/reducir-stock?idProducto=&cantidad=
 POST /api/inventario/reservar?idProducto=&cantidad=&idCliente=   → reservar stock 10 min
 POST /api/inventario/confirmar-reserva?idReserva=                → confirmar y descontar
 ```
-
-> Al agregar stock a un producto inactivo, el sistema lo activa automáticamente llamando al product-service.
+Al agregar stock a un producto inactivo, el sistema lo activa automáticamente llamando al product-service.
 
 ### customer-service — puerto 8085
-
 ```
 POST /api/clientes/registro      → registrar cliente (rol CLIENTE por defecto)
 POST /api/clientes/login         → iniciar sesión (devuelve rol)
@@ -158,7 +152,6 @@ PUT  /api/clientes/{id}/password → cambiar contraseña
 ```
 
 ### purchase-service — puerto 8086
-
 ```
 POST /api/pedidos/checkout       → crear pedido completo con reserva de stock
 GET  /api/pedidos/cliente/{id}   → pedidos de un cliente
@@ -249,19 +242,19 @@ CaminosSostenibles/
 
 ## Stack tecnológico
 
-| Capa              | Tecnología                                    |
-|-------------------|-----------------------------------------------|
-| Backend           | Java 17, Spring Boot 3.2                      |
-| Comunicación      | REST (HTTP), OpenFeign (purchase → otros)     |
-| Base de datos     | MySQL 8 en Railway (4 bases independientes)   |
-| Transacciones     | Spring @Transactional + bloqueo pesimista     |
-| Seguridad         | BCrypt (contraseñas), roles en BD             |
-| Frontend          | HTML5, CSS3, JavaScript ES2022 (fetch API)    |
-| Servidor web      | Nginx (proxy inverso + archivos estáticos)    |
-| Contenedores      | Docker + Docker Compose                       |
-| HTTPS móvil       | Cloudflare Tunnel (cloudflared)               |
-| Scanner códigos   | html5-qrcode (CDN)                            |
-| Gráficas          | Chart.js (CDN)                                |
+| Capa | Tecnología |
+|---|---|
+| Backend | Java 17, Spring Boot 3.2 |
+| Comunicación | REST (HTTP), OpenFeign (purchase → otros) |
+| Base de datos | MySQL 8 en Railway (4 bases independientes) |
+| Transacciones | Spring @Transactional + bloqueo pesimista |
+| Seguridad | BCrypt (contraseñas), roles en BD |
+| Frontend | HTML5, CSS3, JavaScript ES2022 (fetch API) |
+| Servidor web | Nginx (proxy inverso + archivos estáticos) |
+| Contenedores | Docker + Docker Compose |
+| HTTPS móvil | Cloudflare Tunnel (cloudflared) |
+| Scanner códigos | html5-qrcode (CDN) |
+| Gráficas | Chart.js (CDN) |
 
 ---
 
@@ -269,12 +262,12 @@ CaminosSostenibles/
 
 Host: `tramway.proxy.rlwy.net:36355`
 
-| Base de datos | Servicio que la usa | Tablas principales                          |
-|---------------|---------------------|---------------------------------------------|
-| bd_productos  | product-service     | productos, categorias                       |
-| bd_inventario | inventory-service   | existencias_producto, lotes, reservas_stock |
-| bd_clientes   | customer-service    | clientes (con campo `rol`)                  |
-| bd_pedidos    | purchase-service    | pedidos, pedido_items                       |
+| Base de datos | Servicio que la usa | Tablas principales |
+|---|---|---|
+| bd_productos | product-service | productos, categorias |
+| bd_inventario | inventory-service | existencias_producto, lotes, reservas_stock |
+| bd_clientes | customer-service | clientes (con campo rol) |
+| bd_pedidos | purchase-service | pedidos, pedido_items |
 
 ---
 
@@ -282,9 +275,9 @@ Host: `tramway.proxy.rlwy.net:36355`
 
 Las categorías están preestablecidas en la base de datos y se siembran automáticamente al iniciar el `product-service`:
 
-- Frutas y verduras · Lácteos y huevos · Carnes y pescados · Panadería y cereales
-- Bebidas · Limpieza y hogar · Higiene personal · Snacks y dulces
-- Congelados · Aceites y condimentos
+> Frutas y verduras · Lácteos y huevos · Carnes y pescados · Panadería y cereales
+> Bebidas · Limpieza y hogar · Higiene personal · Snacks y dulces
+> Congelados · Aceites y condimentos
 
 ---
 
@@ -297,26 +290,3 @@ docker compose logs cloudflared
 ```
 
 Busca: `https://algo-random.trycloudflare.com` y ábrelo en Safari (iPhone) o Chrome (Android).
-
----
-
-## Conceptos clave para la sustentación
-
-**Sistemas Distribuidos:**
-- 4 microservicios independientes, cada uno con su propia base de datos (aislamiento total)
-- Comunicación entre servicios vía HTTP usando OpenFeign (purchase-service llama a product-service e inventory-service)
-- Orquestación con Docker Compose en red compartida `app-network` con DNS interno
-- Nginx como proxy inverso: el frontend nunca habla directamente con los backends
-- Resolver Docker (`127.0.0.11`) para que nginx resuelva nombres de servicios dinámicamente
-
-**Sistemas Transaccionales:**
-- `@Transactional` garantiza atomicidad en operaciones de inventario (todo o nada)
-- Bloqueo pesimista (`@Lock(PESSIMISTIC_WRITE)`) en `reducirStock` evita doble venta simultánea
-- Sistema de reservas temporales (10 min) previene inconsistencias durante el checkout
-- Cada base de datos tiene esquema independiente — no hay joins entre servicios
-- `@Scheduled` limpia reservas expiradas cada 60 segundos automáticamente
-
-**Control de acceso:**
-- Roles (ADMIN, BODEGUERO, CLIENTE) almacenados en la entidad `Cliente`
-- El login devuelve el rol y el frontend redirige según corresponde
-- Guards en JS verifican el rol antes de cargar cada página protegida
